@@ -12,7 +12,7 @@ class GoogleTextService implements AiTextService {
       : _model = GenerativeModel(
           model: 'gemini-1.5-flash-latest',
           apiKey: kGeminiApiKey,
-          generationConfig: const GenerationConfig(
+          generationConfig: GenerationConfig(
             responseMimeType: 'application/json',
             temperature: 0.9,
           ),
