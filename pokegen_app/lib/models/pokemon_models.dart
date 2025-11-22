@@ -1,88 +1,71 @@
 import 'dart:convert';
 
-enum PokemonType {
-  normal,
+enum CreatureType {
   fire,
   water,
-  electric,
-  grass,
-  ice,
-  fighting,
-  poison,
-  ground,
-  flying,
-  psychic,
-  bug,
-  rock,
-  ghost,
-  dragon,
+  earth,
+  air,
+  light,
+  shadow,
+  nature,
+  metal,
+  arcane,
+  beast,
 }
 
-PokemonType parsePokemonType(String value) {
+CreatureType parseCreatureType(String value) {
   final v = value.trim().toLowerCase();
   switch (v) {
-    case 'normal':
-      return PokemonType.normal;
     case 'fire':
-      return PokemonType.fire;
+      return CreatureType.fire;
     case 'water':
-      return PokemonType.water;
-    case 'electric':
-      return PokemonType.electric;
-    case 'grass':
-      return PokemonType.grass;
-    case 'ice':
-      return PokemonType.ice;
-    case 'fighting':
-      return PokemonType.fighting;
-    case 'poison':
-      return PokemonType.poison;
-    case 'ground':
-      return PokemonType.ground;
-    case 'flying':
-      return PokemonType.flying;
+      return CreatureType.water;
+    case 'earth':
+      return CreatureType.earth;
+    case 'air':
+      return CreatureType.air;
+    case 'light':
+      return CreatureType.light;
+    case 'shadow':
+      return CreatureType.shadow;
+    case 'nature':
+    case 'grass': // Mapping legacy/pokemon types just in case
+      return CreatureType.nature;
+    case 'metal':
+    case 'steel':
+      return CreatureType.metal;
+    case 'arcane':
     case 'psychic':
-      return PokemonType.psychic;
-    case 'bug':
-      return PokemonType.bug;
-    case 'rock':
-      return PokemonType.rock;
-    case 'ghost':
-      return PokemonType.ghost;
-    case 'dragon':
-      return PokemonType.dragon;
+      return CreatureType.arcane;
+    case 'beast':
+    case 'normal':
+      return CreatureType.beast;
     default:
-      return PokemonType.normal;
+      return CreatureType.beast;
   }
 }
 
-String pokemonTypeToString(PokemonType t) => t.name;
+String creatureTypeToString(CreatureType t) => t.name;
 
-class PokemonStats {
+class CreatureStats {
   final int hp;
   final int attack;
   final int defense;
-  final int specialAttack;
-  final int specialDefense;
   final int speed;
 
-  const PokemonStats({
+  const CreatureStats({
     required this.hp,
     required this.attack,
     required this.defense,
-    required this.specialAttack,
-    required this.specialDefense,
     required this.speed,
   });
 
-  factory PokemonStats.fromJson(Map<String, dynamic> json) {
+  factory CreatureStats.fromJson(Map<String, dynamic> json) {
     int clamp(int v) => v.clamp(1, 255);
-    return PokemonStats(
+    return CreatureStats(
       hp: clamp(json['hp'] is num ? (json['hp'] as num).toInt() : 1),
       attack: clamp(json['attack'] is num ? (json['attack'] as num).toInt() : 1),
       defense: clamp(json['defense'] is num ? (json['defense'] as num).toInt() : 1),
-      specialAttack: clamp(json['specialAttack'] is num ? (json['specialAttack'] as num).toInt() : 1),
-      specialDefense: clamp(json['specialDefense'] is num ? (json['specialDefense'] as num).toInt() : 1),
       speed: clamp(json['speed'] is num ? (json['speed'] as num).toInt() : 1),
     );
   }
@@ -91,24 +74,22 @@ class PokemonStats {
         'hp': hp,
         'attack': attack,
         'defense': defense,
-        'specialAttack': specialAttack,
-        'specialDefense': specialDefense,
         'speed': speed,
       };
 }
 
-class Pokemon {
+class Creature {
   final String id;
   final String name;
-  final PokemonType primaryType;
-  final PokemonType? secondaryType;
-  final PokemonStats stats;
+  final CreatureType primaryType;
+  final CreatureType? secondaryType;
+  final CreatureStats stats;
   final String imagePath; // local path to generated PNG (transparent BG)
   final List<String> originalPhotoPaths;
   final DateTime createdAt;
   final String flavorText;
 
-  const Pokemon({
+  const Creature({
     required this.id,
     required this.name,
     required this.primaryType,
@@ -120,14 +101,14 @@ class Pokemon {
     required this.flavorText,
   });
 
-  factory Pokemon.fromJson(Map<String, dynamic> json) => Pokemon(
+  factory Creature.fromJson(Map<String, dynamic> json) => Creature(
         id: json['id'] as String,
         name: json['name'] as String,
-        primaryType: parsePokemonType(json['primaryType'] as String),
+        primaryType: parseCreatureType(json['primaryType'] as String),
         secondaryType: (json['secondaryType'] as String?) != null
-            ? parsePokemonType(json['secondaryType'] as String)
+            ? parseCreatureType(json['secondaryType'] as String)
             : null,
-        stats: PokemonStats.fromJson(json['stats'] as Map<String, dynamic>),
+        stats: CreatureStats.fromJson(json['stats'] as Map<String, dynamic>),
         imagePath: json['imagePath'] as String,
         originalPhotoPaths: (json['originalPhotoPaths'] as List).cast<String>(),
         createdAt: DateTime.parse(json['createdAt'] as String),
@@ -137,8 +118,8 @@ class Pokemon {
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
-        'primaryType': pokemonTypeToString(primaryType),
-        'secondaryType': secondaryType != null ? pokemonTypeToString(secondaryType!) : null,
+        'primaryType': creatureTypeToString(primaryType),
+        'secondaryType': secondaryType != null ? creatureTypeToString(secondaryType!) : null,
         'stats': stats.toJson(),
         'imagePath': imagePath,
         'originalPhotoPaths': originalPhotoPaths,
@@ -153,9 +134,9 @@ class Pokemon {
 class GeneratedSpec {
   final String name;
   final String flavorText;
-  final PokemonType primaryType;
-  final PokemonType? secondaryType;
-  final PokemonStats stats;
+  final CreatureType primaryType;
+  final CreatureType? secondaryType;
+  final CreatureStats stats;
 
   const GeneratedSpec({
     required this.name,

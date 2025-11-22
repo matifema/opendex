@@ -6,12 +6,13 @@ import '../../config.dart';
 import '../../models/pokemon_models.dart';
 import 'ai_service.dart';
 import 'prompts.dart';
+import 'human_detected_exception.dart';
 
 class GoogleTextService implements AiTextService {
-  GoogleTextService()
+  GoogleTextService({required String apiKey})
       : _model = GenerativeModel(
           model: 'gemini-1.5-flash-latest',
-          apiKey: kGeminiApiKey,
+          apiKey: apiKey,
           generationConfig: GenerationConfig(
             responseMimeType: 'application/json',
             temperature: 0.9,
@@ -22,9 +23,8 @@ class GoogleTextService implements AiTextService {
 
   @override
   Future<GeneratedSpec> generateNameAndStats({required String animalDescription}) async {
-    if (kGeminiApiKey.isEmpty) {
-      throw StateError('GEMINI_API_KEY is not set. Pass via --dart-define=GEMINI_API_KEY=...');
-    }
+    // apiKey is validated at construction or higher level
+
 
     final prompt = buildStatsPrompt(animalDescription: animalDescription);
     final response = await _model.generateContent([Content.text(prompt)]);
@@ -37,14 +37,18 @@ class GoogleTextService implements AiTextService {
     final jsonString = _extractJson(text);
     final Map<String, dynamic> data = jsonDecode(jsonString) as Map<String, dynamic>;
 
+    if (data['isHuman'] == true) {
+      throw HumanDetectedException();
+    }
+
     final types = ((data['types'] as List?)?.cast<String>() ?? <String>[])
-        .map(parsePokemonType)
+        .map(parseCreatureType)
         .toList();
 
-    final primaryType = types.isNotEmpty ? types.first : PokemonType.normal;
-    final PokemonType? secondaryType = types.length > 1 ? types[1] : null;
+    final primaryType = types.isNotEmpty ? types.first : CreatureType.beast;
+    final CreatureType? secondaryType = types.length > 1 ? types[1] : null;
 
-    final stats = PokemonStats.fromJson((data['stats'] as Map).cast<String, dynamic>());
+    final stats = CreatureStats.fromJson((data['stats'] as Map).cast<String, dynamic>());
 
     return GeneratedSpec(
       name: (data['name'] as String).trim(),

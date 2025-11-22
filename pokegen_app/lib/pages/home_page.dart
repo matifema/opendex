@@ -9,10 +9,14 @@ import '../models/pokemon_models.dart';
 import '../services/ai/ai_service.dart';
 import '../services/ai/google_text_service.dart';
 import '../services/ai/http_image_service.dart';
+import '../services/ai/human_detected_exception.dart';
 import '../services/ai/prompts.dart';
 import '../services/storage_service.dart';
 import '../widgets/capture_animation.dart';
-import '../widgets/pixel_art_preview.dart';
+import '../widgets/sprite_sheet_animation.dart';
+import 'battle_page.dart';
+import 'settings_page.dart';
+import '../services/settings_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,17 +32,30 @@ class _HomePageState extends State<HomePage> {
 
   bool _isGenerating = false;
   Uint8List? _generatedPng;
-  Pokemon? _pokemon;
+  final List<Creature> _creatures = [];
 
   late final AiTextService _textService;
   late final AiImageService _imageService;
   final _storage = StorageService();
+  SettingsService? _settingsService;
 
   @override
   void initState() {
     super.initState();
-    _textService = GoogleTextService();
-    _imageService = HttpImageService();
+    _initSettings();
+  }
+
+  Future<void> _initSettings() async {
+    _settingsService = await SettingsService.init();
+    _updateServices();
+  }
+
+  void _updateServices() {
+    if (_settingsService == null) return;
+    setState(() {
+      _textService = GoogleTextService(apiKey: _settingsService!.geminiApiKey);
+      _imageService = HttpImageService(baseUrl: _settingsService!.apiBaseUrl);
+    });
   }
 
   Future<void> _handleAddPhoto() async {
@@ -61,28 +78,28 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _isGenerating = true;
       _generatedPng = null;
-      _pokemon = null;
     });
 
     try {
-      // Build prompt for the image model
+      // 1. Safety Check & Stats Generation (Text Model)
+      // We do this FIRST to avoid generating an image if it's a human.
+      final spec = await _textService.generateNameAndStats(animalDescription: description);
+
+      // 2. Build prompt for the image model
       final prompt = buildImagePrompt(animalDescription: description);
 
-      // Generate pixel-art PNG
-      final pngBytes = await _imageService.generatePixelMon(
+      // 3. Generate pixel-art sprite sheet
+      final pngBytes = await _imageService.generateCreatureImage(
         photos: _photos.map((x) => File(x.path)).toList(),
         prompt: prompt,
         size: PixelArtSize.medium,
       );
 
-      // Generate name and stats via text model
-      final spec = await _textService.generateNameAndStats(animalDescription: description);
-
-      // Persist PNG to storage
+      // 4. Persist PNG to storage
       final savedPath = await _storage.savePngBytes(pngBytes);
 
       final id = DateTime.now().millisecondsSinceEpoch.toString();
-      final p = Pokemon(
+      final c = Creature(
         id: id,
         name: spec.name,
         primaryType: spec.primaryType,
@@ -96,8 +113,10 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         _generatedPng = pngBytes;
-        _pokemon = p;
+        _creatures.insert(0, c); // Add to top
       });
+    } on HumanDetectedException catch (e) {
+      _showSnack(e.message);
     } catch (e) {
       _showSnack('Generation failed: $e');
     } finally {
@@ -118,8 +137,41 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PokéSnap PixelMon'),
+        title: const Text('Pet Battler'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () async {
+              if (_settingsService != null) {
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => SettingsPage(settings: _settingsService!),
+                  ),
+                );
+                if (changed == true) {
+                  _updateServices();
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.sports_mma),
+            tooltip: 'Battle!',
+            onPressed: _creatures.length >= 2
+                ? () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BattlePage(
+                          player: _creatures[0],
+                          opponent: _creatures[1],
+                        ),
+                      ),
+                    );
+                  }
+                : () => _showSnack('Generate at least 2 creatures to battle!'),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _handleAddPhoto,
@@ -132,7 +184,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
               Text(
-                'Snap an animal and create a Gen‑1 style pixel monster!',
+                'Snap an animal and create a fantasy creature!',
                 style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
@@ -150,13 +202,17 @@ class _HomePageState extends State<HomePage> {
               FilledButton.icon(
                 onPressed: canGenerate && !_isGenerating ? _handleGenerate : null,
                 icon: const Icon(Icons.auto_awesome),
-                label: const Text('Generate PixelMon'),
+                label: const Text('Generate Creature'),
               ),
               const SizedBox(height: 24),
               if (_generatedPng != null) ...[
-                Center(child: PixelArtPreview(imageBytes: _generatedPng!, maxSize: 256)),
+                Center(child: SpriteSheetAnimation(imageBytes: _generatedPng!, size: 200)),
                 const SizedBox(height: 12),
-                if (_pokemon != null) _buildPokemonCard(_pokemon!),
+              ],
+              if (_creatures.isNotEmpty) ...[
+                Text('Your Creatures (${_creatures.length})', style: theme.textTheme.titleSmall),
+                const SizedBox(height: 8),
+                ..._creatures.map(_buildCreatureCard),
               ],
               const SizedBox(height: 32),
               _buildEnvHints(),
@@ -164,7 +220,7 @@ class _HomePageState extends State<HomePage> {
           ),
           if (_isGenerating)
             Container(
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               child: const Center(child: CaptureAnimation(playing: true)),
             ),
         ],
@@ -222,35 +278,53 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildPokemonCard(Pokemon p) {
+  Widget _buildCreatureCard(Creature c) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(p.name, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text(
-              [
-                p.primaryType.name[0].toUpperCase() + p.primaryType.name.substring(1),
-                if (p.secondaryType != null)
-                  ' / ${p.secondaryType!.name[0].toUpperCase()}${p.secondaryType!.name.substring(1)}'
-              ].join(),
-              style: Theme.of(context).textTheme.labelLarge,
+            FutureBuilder<Uint8List>(
+              future: File(c.imagePath).readAsBytes(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return SpriteSheetAnimation(imageBytes: snapshot.data!, size: 100);
+                }
+                return const SizedBox(width: 100, height: 100, child: Center(child: CircularProgressIndicator()));
+              },
             ),
-            if (p.flavorText.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(p.flavorText, style: Theme.of(context).textTheme.bodyMedium),
-            ],
-            const Divider(height: 24),
-            _buildStatsGrid(p.stats),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.name, style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 4),
+                  Text(
+                    [
+                      c.primaryType.name[0].toUpperCase() + c.primaryType.name.substring(1),
+                      if (c.secondaryType != null)
+                        ' / ${c.secondaryType!.name[0].toUpperCase()}${c.secondaryType!.name.substring(1)}'
+                    ].join(),
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  if (c.flavorText.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(c.flavorText, style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                  const Divider(height: 12),
+                  _buildStatsGrid(c.stats),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatsGrid(PokemonStats s) {
+  Widget _buildStatsGrid(CreatureStats s) {
     Text stat(String label, int v) => Text('$label: $v');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,16 +332,15 @@ class _HomePageState extends State<HomePage> {
         stat('HP', s.hp),
         stat('Attack', s.attack),
         stat('Defense', s.defense),
-        stat('Sp. Atk', s.specialAttack),
-        stat('Sp. Def', s.specialDefense),
         stat('Speed', s.speed),
       ],
     );
   }
 
   Widget _buildEnvHints() {
-    final missingKey = kGeminiApiKey.isEmpty;
-    final missingApi = kApiBaseUrl.isEmpty;
+    if (_settingsService == null) return const SizedBox.shrink();
+    final missingKey = _settingsService!.geminiApiKey.isEmpty;
+    final missingApi = _settingsService!.apiBaseUrl.isEmpty;
     if (!missingKey && !missingApi) return const SizedBox.shrink();
     return Card(
       color: Colors.amber.shade50,
@@ -277,8 +350,8 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Configuration hints'),
-            if (missingKey) const Text('• Set GEMINI_API_KEY via --dart-define to enable name/stat generation'),
-            if (missingApi) const Text('• Set API_BASE_URL via --dart-define pointing to your image generator backend'),
+            if (missingKey) const Text('• Set Gemini API Key in Settings (top right)'),
+            if (missingApi) const Text('• Set API Base URL in Settings (top right)'),
           ],
         ),
       ),

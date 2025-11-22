@@ -9,17 +9,17 @@ import 'ai_service.dart';
 class HttpImageService implements AiImageService {
   final String baseUrl;
 
-  HttpImageService({String? baseUrl}) : baseUrl = baseUrl ?? kApiBaseUrl;
+  HttpImageService({required this.baseUrl});
 
   @override
-  Future<Uint8List> generatePixelMon({
+  Future<Uint8List> generateCreatureImage({
     required List<File> photos,
     required String prompt,
     int size = 256,
   }) async {
     final url = Uri.parse('${baseUrl.replaceAll(RegExp(r"/$"), "")}/generate/pixelmon');
     if (baseUrl.isEmpty) {
-      throw StateError('API_BASE_URL not set. Pass via --dart-define=API_BASE_URL=https://your-backend');
+      throw StateError('API_BASE_URL is not set. Configure it in Settings.');
     }
     final request = http.MultipartRequest('POST', url)
       ..fields['prompt'] = prompt
