@@ -43,50 +43,86 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFDC0A2D), // Pokedex Red
       appBar: AppBar(
         title: const Text('Settings'),
+        backgroundColor: const Color(0xFFDC0A2D),
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'API Configuration',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Enter your API keys manually if you did not provide them via build environment variables.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _geminiKeyController,
-            decoration: InputDecoration(
-              labelText: 'Gemini API Key',
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                icon: Icon(_obscureKey ? Icons.visibility : Icons.visibility_off),
-                onPressed: () => setState(() => _obscureKey = !_obscureKey),
+      body: Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF98CB98), // GameBoy Greenish / LCD
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(width: 4, color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                'API Configuration',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            obscureText: _obscureKey,
+              const SizedBox(height: 8),
+              Text(
+                'Enter your API keys manually if you did not provide them via build environment variables.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _geminiKeyController,
+                decoration: InputDecoration(
+                  labelText: 'Gemini API Key',
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white70,
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureKey ? Icons.visibility : Icons.visibility_off),
+                    onPressed: () => setState(() => _obscureKey = !_obscureKey),
+                  ),
+                ),
+                obscureText: _obscureKey,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _baseUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'API Base URL',
+                  hintText: 'https://your-backend.com',
+                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.white70,
+                ),
+              ),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                onPressed: _save,
+                icon: const Icon(Icons.save),
+                label: const Text('Save Settings'),
+                style: FilledButton.styleFrom(
+                  shape: const BeveledRectangleBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(4)),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _baseUrlController,
-            decoration: const InputDecoration(
-              labelText: 'API Base URL',
-              hintText: 'https://your-backend.com',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 32),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save),
-            label: const Text('Save Settings'),
-          ),
-        ],
+        ),
       ),
     );
   }

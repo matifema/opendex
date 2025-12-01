@@ -8,13 +8,15 @@ class SpriteSheetAnimation extends StatefulWidget {
   final int frameCount;
   final double size;
   final Duration frameDuration;
+  final bool playOnTap;
 
   const SpriteSheetAnimation({
     super.key,
     required this.imageBytes,
     this.frameCount = 4,
-    this.size = 128, // Display size
-    this.frameDuration = const Duration(milliseconds: 200),
+    this.size = 128,
+    this.frameDuration = const Duration(milliseconds: 300),
+    this.playOnTap = true,
   });
 
   @override
@@ -24,19 +26,48 @@ class SpriteSheetAnimation extends StatefulWidget {
 class _SpriteSheetAnimationState extends State<SpriteSheetAnimation> {
   int _currentFrame = 0;
   Timer? _timer;
+  bool _isPlaying = false;
 
   @override
   void initState() {
     super.initState();
-    _startAnimation();
+    // Play one cycle when the widget is first loaded
+    _playOneCycle();
   }
 
-  void _startAnimation() {
+  void _startLoopingAnimation() {
     _timer = Timer.periodic(widget.frameDuration, (timer) {
       if (mounted) {
         setState(() {
           _currentFrame = (_currentFrame + 1) % widget.frameCount;
         });
+      }
+    });
+  }
+
+  void _playOneCycle() {
+    if (_isPlaying) return; // Prevent multiple taps during animation
+    
+    setState(() {
+      _isPlaying = true;
+      _currentFrame = 0;
+    });
+
+    int frameCounter = 0;
+    _timer = Timer.periodic(widget.frameDuration, (timer) {
+      if (mounted) {
+        frameCounter++;
+        if (frameCounter < widget.frameCount) {
+          setState(() {
+            _currentFrame = frameCounter;
+          });
+        } else {
+          timer.cancel();
+          setState(() {
+            _currentFrame = 0;
+            _isPlaying = false;
+          });
+        }
       }
     });
   }
@@ -49,11 +80,7 @@ class _SpriteSheetAnimationState extends State<SpriteSheetAnimation> {
 
   @override
   Widget build(BuildContext context) {
-    // We assume the sprite sheet is horizontal: (width = height * frameCount)
-    // We want to show 1 frame.
-    // We use a Stack with a Positioned Image to "crop" the view.
-    
-    return Container(
+    final imageWidget = Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
@@ -70,7 +97,7 @@ class _SpriteSheetAnimationState extends State<SpriteSheetAnimation> {
                 widget.imageBytes,
                 width: widget.size * widget.frameCount,
                 height: widget.size,
-                fit: BoxFit.fill, // Stretch to fill the calculated strip size
+                fit: BoxFit.fill,
                 filterQuality: FilterQuality.none,
                 isAntiAlias: false,
               ),
@@ -79,5 +106,14 @@ class _SpriteSheetAnimationState extends State<SpriteSheetAnimation> {
         ),
       ),
     );
+
+    if (widget.playOnTap) {
+      return GestureDetector(
+        onTap: _playOneCycle,
+        child: imageWidget,
+      );
+    }
+
+    return imageWidget;
   }
 }

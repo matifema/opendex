@@ -4,16 +4,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../config.dart';
 import '../models/pokemon_models.dart';
-import '../services/ai/ai_service.dart';
-import '../services/ai/google_text_service.dart';
-import '../services/ai/http_image_service.dart';
-import '../services/ai/human_detected_exception.dart';
-import '../services/ai/prompts.dart';
+import '../services/backend_service.dart';
 import '../services/storage_service.dart';
-import '../widgets/capture_animation.dart';
-import '../widgets/sprite_sheet_animation.dart';
+import '../widgets/home/control_panel.dart';
+import '../widgets/home/info_panel.dart';
+import '../widgets/home/pokedex_header.dart';
+import '../widgets/home/pokedex_screen.dart';
 import 'battle_page.dart';
 import 'settings_page.dart';
 import '../services/settings_service.dart';
@@ -31,92 +28,144 @@ class _HomePageState extends State<HomePage> {
   final _descController = TextEditingController(text: '');
 
   bool _isGenerating = false;
-  Uint8List? _generatedPng;
   final List<Creature> _creatures = [];
 
-  late final AiTextService _textService;
-  late final AiImageService _imageService;
+  late final BackendService _backendService;
   final _storage = StorageService();
   SettingsService? _settingsService;
+  
+  // UI state
+  bool _showStats = false;
+  int _gymBadges = 0;
+  int _battlesWon = 0;
+  int _battlesLost = 0;
 
   @override
   void initState() {
     super.initState();
+    _backendService = BackendService();
     _initSettings();
   }
 
   Future<void> _initSettings() async {
     _settingsService = await SettingsService.init();
-    _updateServices();
   }
 
   void _updateServices() {
-    if (_settingsService == null) return;
-    setState(() {
-      _textService = GoogleTextService(apiKey: _settingsService!.geminiApiKey);
-      _imageService = HttpImageService(baseUrl: _settingsService!.apiBaseUrl);
-    });
+    // This method is no longer needed as BackendService handles its own configuration
+    // based on settings.
   }
 
   Future<void> _handleAddPhoto() async {
+    // Show dialog to select image source
+    final imageSource = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose Image Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    if (imageSource == null) return;
+    
     final image = await _picker.pickImage(
-      source: ImageSource.camera,
+      source: imageSource,
       preferredCameraDevice: CameraDevice.rear,
       imageQuality: 100,
     );
     if (image != null) {
-      setState(() => _photos.add(image));
+      setState(() {
+        _photos.clear();
+        _photos.add(image);
+      });
+      // Immediately show dialog for description
+      _showDescriptionDialog();
+    }
+  }
+
+  Future<void> _showDescriptionDialog() async {
+    final descController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Describe the creature'),
+        content: TextField(
+          controller: descController,
+          decoration: const InputDecoration(
+            hintText: 'e.g., "striped tiger cub"',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result == true && mounted) {
+      _descController.text = descController.text;
+      await _handleGenerate();
     }
   }
 
   Future<void> _handleGenerate() async {
     final description = _descController.text.trim().isEmpty ? 'a real-world animal' : _descController.text.trim();
     if (_photos.isEmpty) {
-      _showSnack('Add at least one photo.');
+      _showSnack('Take a photo first!');
       return;
     }
     setState(() {
       _isGenerating = true;
-      _generatedPng = null;
     });
 
     try {
-      // 1. Safety Check & Stats Generation (Text Model)
-      // We do this FIRST to avoid generating an image if it's a human.
-      final spec = await _textService.generateNameAndStats(animalDescription: description);
-
-      // 2. Build prompt for the image model
-      final prompt = buildImagePrompt(animalDescription: description);
-
-      // 3. Generate pixel-art sprite sheet
-      final pngBytes = await _imageService.generateCreatureImage(
-        photos: _photos.map((x) => File(x.path)).toList(),
-        prompt: prompt,
-        size: PixelArtSize.medium,
+      final result = await _backendService.generateCreature(
+        photo: File(_photos.first.path),
+        description: description,
       );
 
-      // 4. Persist PNG to storage
-      final savedPath = await _storage.savePngBytes(pngBytes);
+      final savedPath = await _storage.savePngBytes(result.imageBytes);
 
       final id = DateTime.now().millisecondsSinceEpoch.toString();
       final c = Creature(
         id: id,
-        name: spec.name,
-        primaryType: spec.primaryType,
-        secondaryType: spec.secondaryType,
-        stats: spec.stats,
+        name: result.spec.name,
+        primaryType: result.spec.primaryType,
+        secondaryType: result.spec.secondaryType,
+        stats: result.spec.stats,
         imagePath: savedPath,
         originalPhotoPaths: _photos.map((x) => x.path).toList(),
         createdAt: DateTime.now(),
-        flavorText: spec.flavorText,
+        flavorText: result.spec.flavorText,
       );
 
       setState(() {
-        _generatedPng = pngBytes;
-        _creatures.insert(0, c); // Add to top
+        _creatures.insert(0, c);
+        _photos.clear();
+        _descController.clear();
       });
-    } on HumanDetectedException catch (e) {
-      _showSnack(e.message);
     } catch (e) {
       _showSnack('Generation failed: $e');
     } finally {
@@ -132,229 +181,103 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final canGenerate = _photos.isNotEmpty;
+    final currentCreature = _creatures.isNotEmpty ? _creatures.first : null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pet Battler'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              if (_settingsService != null) {
-                final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) => SettingsPage(settings: _settingsService!),
-                  ),
-                );
-                if (changed == true) {
-                  _updateServices();
-                }
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.sports_mma),
-            tooltip: 'Battle!',
-            onPressed: _creatures.length >= 2
-                ? () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => BattlePage(
-                          player: _creatures[0],
-                          opponent: _creatures[1],
-                        ),
-                      ),
-                    );
-                  }
-                : () => _showSnack('Generate at least 2 creatures to battle!'),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _handleAddPhoto,
-        icon: const Icon(Icons.add_a_photo),
-        label: const Text('Add Photo'),
-      ),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            children: [
-              Text(
-                'Snap an animal and create a fantasy creature!',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'Animal description (e.g., "striped tiger cub")',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.pets),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildPhotoStrip(),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: canGenerate && !_isGenerating ? _handleGenerate : null,
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('Generate Creature'),
-              ),
-              const SizedBox(height: 24),
-              if (_generatedPng != null) ...[
-                Center(child: SpriteSheetAnimation(imageBytes: _generatedPng!, size: 200)),
-                const SizedBox(height: 12),
-              ],
-              if (_creatures.isNotEmpty) ...[
-                Text('Your Creatures (${_creatures.length})', style: theme.textTheme.titleSmall),
-                const SizedBox(height: 8),
-                ..._creatures.map(_buildCreatureCard),
-              ],
-              const SizedBox(height: 32),
-              _buildEnvHints(),
-            ],
-          ),
-          if (_isGenerating)
-            Container(
-              color: Colors.black.withValues(alpha: 0.4),
-              child: const Center(child: CaptureAnimation(playing: true)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPhotoStrip() {
-    if (_photos.isEmpty) {
-      return const Card(
-        child: SizedBox(
-          height: 100,
-          child: Center(child: Text('No photos yet. Tap "Add Photo" to capture.')),
-        ),
-      );
-    }
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _photos.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
-          final x = _photos[i];
-          return Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(x.path),
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: InkWell(
-                  onTap: () => setState(() => _photos.removeAt(i)),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.all(4),
-                    child: const Icon(Icons.close, color: Colors.white, size: 16),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCreatureCard(Creature c) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFFDC0A2D), // Pokedex Red
+      body: SafeArea(
+        child: Column(
           children: [
-            FutureBuilder<Uint8List>(
-              future: File(c.imagePath).readAsBytes(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return SpriteSheetAnimation(imageBytes: snapshot.data!, size: 100);
+            // Header with lens and lights
+            PokedexHeader(
+              onSettingsPressed: () async {
+                if (_settingsService != null) {
+                  final changed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => SettingsPage(settings: _settingsService!),
+                    ),
+                  );
+                  if (changed == true) {
+                    _updateServices();
+                  }
                 }
-                return const SizedBox(width: 100, height: 100, child: Center(child: CircularProgressIndicator()));
+              },
+              onBattlePressed: _creatures.length >= 2
+                  ? () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => BattlePage(
+                            player: _creatures[0],
+                            opponent: _creatures[1],
+                          ),
+                        ),
+                      );
+                    }
+                  : () => _showSnack('Generate at least 2 creatures to battle!'),
+              canBattle: _creatures.length >= 2,
+            ),
+            
+            // Main screen area
+            Expanded(
+              child: PokedexScreen(
+                creature: currentCreature,
+                isGenerating: _isGenerating,
+                showStats: _showStats,
+                creatureIndex: _creatures.indexOf(currentCreature ?? Creature(
+                  id: '',
+                  name: '',
+                  primaryType: CreatureType.beast,
+                  secondaryType: null,
+                  stats: const CreatureStats(hp: 0, attack: 0, defense: 0, speed: 0),
+                  imagePath: '',
+                  originalPhotoPaths: [],
+                  createdAt: DateTime.now(),
+                  flavorText: '',
+                )),
+              ),
+            ),
+            
+            // Bottom info panel
+            InfoPanel(
+              creatureCount: _creatures.length,
+              gymBadges: _gymBadges,
+              battlesWon: _battlesWon,
+              battlesLost: _battlesLost,
+            ),
+            
+            // Control panel with buttons
+            ControlPanel(
+              onCapturePressed: _handleAddPhoto,
+              onDPadUp: () {
+                if (_creatures.length > 1) {
+                  setState(() {
+                    final creature = _creatures.removeAt(0);
+                    _creatures.add(creature);
+                  });
+                }
+              },
+              onDPadDown: () {
+                if (_creatures.length > 1) {
+                  setState(() {
+                    final creature = _creatures.removeLast();
+                    _creatures.insert(0, creature);
+                  });
+                }
+              },
+              onDPadLeft: () {},
+              onDPadRight: () {},
+              onAPressed: () {
+                setState(() {
+                  _showStats = !_showStats;
+                });
               },
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(c.name, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      c.primaryType.name[0].toUpperCase() + c.primaryType.name.substring(1),
-                      if (c.secondaryType != null)
-                        ' / ${c.secondaryType!.name[0].toUpperCase()}${c.secondaryType!.name.substring(1)}'
-                    ].join(),
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                  if (c.flavorText.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(c.flavorText, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                  const Divider(height: 12),
-                  _buildStatsGrid(c.stats),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsGrid(CreatureStats s) {
-    Text stat(String label, int v) => Text('$label: $v');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        stat('HP', s.hp),
-        stat('Attack', s.attack),
-        stat('Defense', s.defense),
-        stat('Speed', s.speed),
-      ],
-    );
-  }
-
-  Widget _buildEnvHints() {
-    if (_settingsService == null) return const SizedBox.shrink();
-    final missingKey = _settingsService!.geminiApiKey.isEmpty;
-    final missingApi = _settingsService!.apiBaseUrl.isEmpty;
-    if (!missingKey && !missingApi) return const SizedBox.shrink();
-    return Card(
-      color: Colors.amber.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Configuration hints'),
-            if (missingKey) const Text('• Set Gemini API Key in Settings (top right)'),
-            if (missingApi) const Text('• Set API Base URL in Settings (top right)'),
           ],
         ),
       ),
     );
   }
 }
+
+
+

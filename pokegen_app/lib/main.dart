@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'pages/home_page.dart';
 
@@ -13,11 +14,14 @@ class PokeSnapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PokéSnap PixelMon',
+      title: 'PokéDex',
       theme: ThemeData(
-        colorSchemeSeed: Colors.redAccent,
-        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFDC0A2D), // Pokedex Red
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
+        textTheme: GoogleFonts.vt323TextTheme(),
       ),
       home: const HomePage(),
     );
