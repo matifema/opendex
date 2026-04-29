@@ -6,7 +6,7 @@ class PixelArtPreview extends StatelessWidget {
   final Uint8List imageBytes;
   final double maxSize;
 
-  const PixelArtPreview({super.key, required this.imageBytes, this.maxSize = 256});
+  const PixelArtPreview({super.key, required this.imageBytes, this.maxSize = 512});
 
   @override
   Widget build(BuildContext context) {

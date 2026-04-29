@@ -2,11 +2,7 @@
 
 Capture one or more photos of an animal with the device camera, generate a 1st‑gen Pokémon–style pixel creature with a transparent PNG, and auto-generate a name and stats.
 
-This repo includes:
-- `pokegen_app/` – a Flutter app (lib/ + pubspec.yaml)
-- `docs/` – Mermaid data models and replicable prompts
-
-Note: Image generation is delegated to your own HTTP backend (`API_BASE_URL`) to securely call your chosen image model. Text generation uses Gemini via the client SDK (`GEMINI_API_KEY`).
+All AI generation runs **client-side** via the Gemini API — no backend server required.
 
 ---
 
@@ -30,11 +26,11 @@ Note: Image generation is delegated to your own HTTP backend (`API_BASE_URL`) to
   - `flutter pub get`
 
 3) Configure environment
-- Provide your keys via `--dart-define` at run time:
+- Provide your Gemini API key via `--dart-define` at run time:
   - `GEMINI_API_KEY=<your gemini key>`
-  - `API_BASE_URL=<your backend base url>`, e.g., `https://api.example.com`
 - Example run:
-  - `flutter run --dart-define=GEMINI_API_KEY=sk-... --dart-define=API_BASE_URL=https://api.example.com`
+  - `flutter run --dart-define=GEMINI_API_KEY=sk-...`
+- Or enter the key in the app's Settings screen at runtime.
 
 4) Platform permissions
 - Android: Edit `android/app/src/main/AndroidManifest.xml` and add within `<manifest>`:
@@ -55,31 +51,32 @@ Note: Image generation is delegated to your own HTTP backend (`API_BASE_URL`) to
 
 ## How it works
 
-- Capture Photos: Uses `image_picker` to take one or more photos.
-- Generate Pixel Art PNG: Sends photos + a strict prompt to your backend (`/generate/pixelmon`) which calls an image model to return a transparent PNG.
-- Generate Name & Stats: Uses Gemini (client-side) to produce JSON with name, types, flavor text, and base stats.
-- Storage & Animation: Saves PNG locally with a Pokéball-themed capture animation overlay during generation.
+- **Capture Photos**: Uses `image_picker` to take one or more photos.
+- **Analyze & Generate Stats**: Sends the photo + description to `gemini-3.1-flash-lite-preview` (multimodal) to get creature stats, types, flavor text, and a visual spec — all as structured JSON. Includes a safety check that rejects human photos.
+- **Generate Sprite Sheet**: Sends the visual spec to `gemini-3.1-flash-image-preview` to produce a 4-frame pixel art sprite sheet (128×32 px).
+- **Post-Process**: Converts the white background to transparent and resizes to exactly 128×32 using nearest-neighbor interpolation (crisp pixels).
+- **Move Selection**: Assigns 4 Gen 1-style moves based on the creature's types (type-matching damaging + status + coverage).
+- **Storage & Animation**: Saves the PNG locally with a Pokéball-themed capture animation overlay during generation.
 
 Files of interest:
 - `pokegen_app/lib/pages/home_page.dart` – camera flow and UI
-- `pokegen_app/lib/services/ai/*` – prompts and AI services
+- `pokegen_app/lib/services/ai/gemini_service.dart` – Gemini API calls (analysis + image generation)
+- `pokegen_app/lib/services/ai/image_processor.dart` – white→transparent + resize post-processing
+- `pokegen_app/lib/services/ai/move_database.dart` – Gen 1 move database + type-based selection
 - `pokegen_app/lib/models/pokemon_models.dart` – data models
 - `docs/data-models.md` – Mermaid diagrams
 - `docs/prompts.md` – replicated prompts
 
 ---
 
-## Backend contract (image generation)
+## AI Models
 
-POST `${API_BASE_URL}/generate/pixelmon`
-- Multipart form-data:
-  - `photos`: one or more image files
-  - `prompt`: string
-  - `size`: integer (e.g., 256)
-- Returns:
-  - `200 OK` with raw PNG bytes (transparent background, square canvas)
+| Step | Model | Purpose |
+|------|-------|---------|
+| Analysis | `gemini-3.1-flash-lite-preview` | Multimodal (photo + text) → JSON stats, types, visual spec, safety check |
+| Image | `gemini-3.1-flash-image-preview` | Text prompt → 4-frame pixel art sprite sheet (PNG) |
 
-Security: Keep model API keys on the server. Validate inputs and size limits server-side.
+Both models are accessed via the `firebase_ai` Dart SDK using `FirebaseAI.googleAI()` (Gemini Developer API).
 
 ---
 

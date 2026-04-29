@@ -14,7 +14,7 @@ class SpriteSheetAnimation extends StatefulWidget {
     super.key,
     required this.imageBytes,
     this.frameCount = 4,
-    this.size = 128,
+    this.size = 256,
     this.frameDuration = const Duration(milliseconds: 300),
     this.playOnTap = true,
   });

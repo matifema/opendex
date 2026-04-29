@@ -12,26 +12,22 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _geminiKeyController;
-  late final TextEditingController _baseUrlController;
   bool _obscureKey = true;
 
   @override
   void initState() {
     super.initState();
     _geminiKeyController = TextEditingController(text: widget.settings.geminiApiKey);
-    _baseUrlController = TextEditingController(text: widget.settings.apiBaseUrl);
   }
 
   @override
   void dispose() {
     _geminiKeyController.dispose();
-    _baseUrlController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     await widget.settings.setGeminiApiKey(_geminiKeyController.text.trim());
-    await widget.settings.setApiBaseUrl(_baseUrlController.text.trim());
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Settings saved')),
@@ -70,7 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.all(16),
             children: [
               Text(
-                'API Configuration',
+                'Gemini API Key',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.black87,
                   fontWeight: FontWeight.bold,
@@ -78,7 +74,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter your API keys manually if you did not provide them via build environment variables.',
+                'Enter your Gemini API key. All AI generation runs directly on your device.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.black54,
                 ),
@@ -97,17 +93,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 obscureText: _obscureKey,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _baseUrlController,
-                decoration: const InputDecoration(
-                  labelText: 'API Base URL',
-                  hintText: 'https://your-backend.com',
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white70,
-                ),
               ),
               const SizedBox(height: 32),
               FilledButton.icon(

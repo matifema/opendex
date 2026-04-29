@@ -14,7 +14,7 @@ class PokeSnapApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'PokéDex',
+      title: 'OpénDex',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFDC0A2D), // Pokedex Red

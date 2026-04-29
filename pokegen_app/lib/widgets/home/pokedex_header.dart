@@ -27,7 +27,7 @@ class PokedexHeader extends StatelessWidget {
               const SizedBox(width: 80),
               Expanded(
                 child: Text(
-                  'PokéDex',
+                  'OpénDex',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

@@ -1,11 +1,11 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/pokemon_models.dart';
-import '../services/backend_service.dart';
+import '../services/ai/gemini_service.dart';
+import '../services/ai/image_processor.dart';
 import '../services/storage_service.dart';
 import '../widgets/home/control_panel.dart';
 import '../widgets/home/info_panel.dart';
@@ -30,7 +30,7 @@ class _HomePageState extends State<HomePage> {
   bool _isGenerating = false;
   final List<Creature> _creatures = [];
 
-  late final BackendService _backendService;
+  GeminiService? _geminiService;
   final _storage = StorageService();
   SettingsService? _settingsService;
   
@@ -43,17 +43,17 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _backendService = BackendService();
     _initSettings();
   }
 
   Future<void> _initSettings() async {
     _settingsService = await SettingsService.init();
+    _geminiService = GeminiService.fromSettings(_settingsService!);
   }
 
-  void _updateServices() {
-    // This method is no longer needed as BackendService handles its own configuration
-    // based on settings.
+  Future<void> _reloadServices() async {
+    _settingsService = await SettingsService.init();
+    _geminiService = GeminiService.fromSettings(_settingsService!);
   }
 
   Future<void> _handleAddPhoto() async {
@@ -141,12 +141,14 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      final result = await _backendService.generateCreature(
+      final result = await _geminiService!.generateCreature(
         photo: File(_photos.first.path),
         description: description,
       );
 
-      final savedPath = await _storage.savePngBytes(result.imageBytes);
+      // Post-process: white→transparent + resize to 128x32
+      final processedBytes = await processSpriteSheet(result.imageBytes);
+      final savedPath = await _storage.savePngBytes(processedBytes);
 
       final id = DateTime.now().millisecondsSinceEpoch.toString();
       final c = Creature(
@@ -159,6 +161,7 @@ class _HomePageState extends State<HomePage> {
         originalPhotoPaths: _photos.map((x) => x.path).toList(),
         createdAt: DateTime.now(),
         flavorText: result.spec.flavorText,
+        moves: result.spec.moves,
       );
 
       setState(() {
@@ -198,7 +201,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   );
                   if (changed == true) {
-                    _updateServices();
+                    await _reloadServices();
                   }
                 }
               },
