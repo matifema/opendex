@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
-// ─── Pokédex Control Panel Colors ─────────────────────────────────────────────
+// ─── Opéndex Control Panel Colors ─────────────────────────────────────────────
 const _kPokedexRed = Color(0xFFDC0A2D);
 const _kPokedexDarkRed = Color(0xFFB80828);
 const _kButtonRed = Color(0xFFE83050);
@@ -70,21 +70,6 @@ class ControlPanel extends StatelessWidget {
                       onRight: onDPadRight,
                     ),
                   ],
-                ),
-              ),
-            ),
-
-            // "POKéDEX" label
-            Positioned(
-              bottom: 4,
-              right: 16,
-              child: Text(
-                'POKéDEX',
-                style: TextStyle(
-                  fontFamily: 'VT323',
-                  fontSize: 10,
-                  color: Colors.white.withValues(alpha: 0.25),
-                  letterSpacing: 2,
                 ),
               ),
             ),

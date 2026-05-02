@@ -174,6 +174,41 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// Release (delete) the currently viewed creature.
+  Future<void> _handleRelease() async {
+    if (_currentIndex < 0 || _currentIndex >= _creatures.length) return;
+
+    final creature = _creatures[_currentIndex];
+
+    // Delete the sprite image file
+    try {
+      final spriteFile = File(creature.imagePath);
+      if (await spriteFile.exists()) {
+        await spriteFile.delete();
+      }
+    } catch (_) {}
+
+    // Delete original photo files
+    for (final photoPath in creature.originalPhotoPaths) {
+      try {
+        final photoFile = File(photoPath);
+        if (await photoFile.exists()) {
+          await photoFile.delete();
+        }
+      } catch (_) {}
+    }
+
+    // Remove from list and persist
+    setState(() {
+      _creatures.removeAt(_currentIndex);
+      if (_currentIndex >= _creatures.length && _currentIndex > 0) {
+        _currentIndex = _creatures.length - 1;
+      }
+    });
+
+    await _pokedexStorage.saveCreatures(_creatures);
+  }
+
   void _onKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
@@ -219,6 +254,7 @@ class _HomePageState extends State<HomePage> {
                   isGenerating: _isGenerating,
                   creatureIndex: _currentIndex,
                   creatureCount: _creatures.length,
+                  onReleasePressed: _creatures.isNotEmpty ? _handleRelease : null,
                 ),
               ),
 

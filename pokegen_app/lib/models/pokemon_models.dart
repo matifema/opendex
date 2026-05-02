@@ -180,6 +180,13 @@ class GeneratedSpec {
   final CreatureStats stats;
   final List<Move> moves;
 
+  // Visual spec fields for grounding the image generation
+  final String creatureDescription;  // Rich description of the creature's appearance
+  final String visualSubject;        // Pixel art subject description
+  final List<String> visualPalette;  // Hex color palette
+  final String visualAnimation;      // Frame-by-frame animation description
+  final String visualDetails;        // Key visual features, proportions, effects
+
   const GeneratedSpec({
     required this.name,
     required this.flavorText,
@@ -187,6 +194,11 @@ class GeneratedSpec {
     required this.secondaryType,
     required this.stats,
     this.moves = const [],
+    this.creatureDescription = '',
+    this.visualSubject = '',
+    this.visualPalette = const [],
+    this.visualAnimation = '',
+    this.visualDetails = '',
   });
 }
 

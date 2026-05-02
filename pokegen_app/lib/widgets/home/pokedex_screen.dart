@@ -38,6 +38,7 @@ class PokedexScreen extends StatefulWidget {
   final bool isGenerating;
   final int creatureIndex;
   final int creatureCount;
+  final VoidCallback? onReleasePressed;
 
   const PokedexScreen({
     super.key,
@@ -45,6 +46,7 @@ class PokedexScreen extends StatefulWidget {
     required this.isGenerating,
     required this.creatureIndex,
     this.creatureCount = 0,
+    this.onReleasePressed,
   });
 
   @override
@@ -232,22 +234,30 @@ class _PokedexScreenState extends State<PokedexScreen> {
                 if (creature.moves.isNotEmpty)
                   _buildMovesPanel(creature.moves),
 
-                // ── Original Photo Button ─────────────────────────────────
-                if (creature.originalPhotoPaths.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+                // ── Action Buttons: Photo + Release ───────────────────────
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (creature.originalPhotoPaths.isNotEmpty) ...[
                         Text(
                           'PHOTO',
                           style: _pixelText(fontSize: 14, color: _kLcdTextLight),
                         ),
                         const SizedBox(width: 6),
                         _buildPhotoIconButton(creature.originalPhotoPaths.first),
+                        const SizedBox(width: 16),
                       ],
-                    ),
+                      Text(
+                        'RELEASE',
+                        style: _pixelText(fontSize: 14, color: _kLcdTextLight),
+                      ),
+                      const SizedBox(width: 6),
+                      _buildReleaseIconButton(),
+                    ],
                   ),
+                ),
 
                 const SizedBox(height: 12),
 
@@ -669,6 +679,127 @@ class _PokedexScreenState extends State<PokedexScreen> {
           Icons.camera_alt,
           size: 16,
           color: _kLcdTextDark,
+        ),
+      ),
+    );
+  }
+
+  // ─── Release Icon Button ─────────────────────────────────────────────────
+  Widget _buildReleaseIconButton() {
+    return GestureDetector(
+      onTap: () => _showReleaseConfirmation(context),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: _kPokedexRed.withValues(alpha: 0.8),
+          border: Border.all(color: _kPanelBorder, width: 2),
+          borderRadius: BorderRadius.circular(3),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.delete_outline,
+          size: 16,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  // ─── Release Confirmation Dialog ─────────────────────────────────────────
+  void _showReleaseConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: _kPokedexBrown,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: _kPokedexRed, width: 3),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title bar
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: const BoxDecoration(
+                  color: _kPokedexRed,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(2),
+                    topRight: Radius.circular(2),
+                  ),
+                ),
+                child: Text(
+                  'RELEASE POKEMON',
+                  style: _pixelText(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+              // Message
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Text(
+                  'Are you sure you want to release ${widget.creature?.name.toUpperCase()}?\nThis cannot be undone.',
+                  textAlign: TextAlign.center,
+                  style: _pixelText(fontSize: 18, color: _kLcdTextDark),
+                ),
+              ),
+              // Buttons
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Cancel button
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        backgroundColor: _kLcdDarkGreen,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(2),
+                          side: const BorderSide(color: _kPanelBorder),
+                        ),
+                      ),
+                      child: Text(
+                        'CANCEL',
+                        style: _pixelText(fontSize: 18, color: _kLcdTextDark),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Release button
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        widget.onReleasePressed?.call();
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                        backgroundColor: _kPokedexRed,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(2),
+                          side: const BorderSide(color: _kPanelBorder),
+                        ),
+                      ),
+                      child: Text(
+                        'RELEASE',
+                        style: _pixelText(fontSize: 18, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
