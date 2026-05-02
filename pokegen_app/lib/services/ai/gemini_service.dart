@@ -213,13 +213,19 @@ PIXEL ART RULES:
 - NO anti-aliasing or blur effects
 - NO gradients (use dithering patterns if needed)
 - Sharp, crisp edges on every pixel
-- Limited color palette with clear outlines (black or dark borders)
+- Limited color palette
 - Each frame must be clearly separated and properly aligned
 - The creature should be centered in each 64 x 64 frame
 - Maintain consistent size and position across all frames
 - Use dithering for shading, not smooth gradients
 - The creature itself must NOT use pure white pixels - use off-white or light grays
 - Only the background should be pure white (#FFFFFF)
+
+OUTLINE RULES (CRITICAL):
+- Use dark outlines ONLY for internal features (eyes, mouth, limb separations, wing segments)
+- DO NOT draw a black or dark border/outline around the entire creature silhouette
+- The creature edges should blend directly into the white background — no outer stroke, no halo, no dark rim
+- Think Pokemon Gen 2-3 sprites: the character outline is defined by color contrast, NOT by a black border
 
 Create a wide horizontal sprite sheet with 4 distinct idle animation frames showing smooth looping movement.''';
 

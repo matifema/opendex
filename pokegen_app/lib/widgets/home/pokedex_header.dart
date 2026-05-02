@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 
 class PokedexHeader extends StatelessWidget {
   final VoidCallback onSettingsPressed;
-  final VoidCallback onBattlePressed;
-  final bool canBattle;
 
   const PokedexHeader({
     super.key,
     required this.onSettingsPressed,
-    required this.onBattlePressed,
-    required this.canBattle,
   });
 
   @override
@@ -26,36 +22,36 @@ class PokedexHeader extends StatelessWidget {
             children: [
               const SizedBox(width: 80),
               Expanded(
-                child: Text(
-                  'OpénDex',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 50,
-                      shadows: [
-                      Shadow(
-                        color: Colors.black.withOpacity(0.5),
-                        offset: const Offset(2, 2),
-                        blurRadius: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'OpénDex',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 50,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              offset: const Offset(2, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  _buildHardwareButton(
-                    icon: Icons.settings,
-                    color: Colors.blue.shade700,
-                    onPressed: onSettingsPressed,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildHardwareButton(
-                    icon: Icons.sports_mma,
-                    color: Colors.red.shade700,
-                    onPressed: onBattlePressed,
-                  ),
-                ],
+              _buildHardwareButton(
+                icon: Icons.settings,
+                color: Colors.blue.shade700,
+                onPressed: onSettingsPressed,
               ),
             ],
           ),
@@ -83,7 +79,7 @@ class PokedexHeader extends StatelessWidget {
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),

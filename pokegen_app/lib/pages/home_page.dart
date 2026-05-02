@@ -1,17 +1,18 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/pokemon_models.dart';
 import '../services/ai/gemini_service.dart';
 import '../services/ai/image_processor.dart';
 import '../services/storage_service.dart';
+import '../services/pokedex_storage_service.dart';
 import '../widgets/home/control_panel.dart';
-import '../widgets/home/info_panel.dart';
 import '../widgets/home/pokedex_header.dart';
 import '../widgets/home/pokedex_screen.dart';
-import 'battle_page.dart';
 import 'settings_page.dart';
 import '../services/settings_service.dart';
 
@@ -29,16 +30,12 @@ class _HomePageState extends State<HomePage> {
 
   bool _isGenerating = false;
   final List<Creature> _creatures = [];
+  int _currentIndex = 0;
 
   GeminiService? _geminiService;
   final _storage = StorageService();
+  final _pokedexStorage = PokedexStorageService();
   SettingsService? _settingsService;
-  
-  // UI state
-  bool _showStats = false;
-  int _gymBadges = 0;
-  int _battlesWon = 0;
-  int _battlesLost = 0;
 
   @override
   void initState() {
@@ -49,6 +46,19 @@ class _HomePageState extends State<HomePage> {
   Future<void> _initSettings() async {
     _settingsService = await SettingsService.init();
     _geminiService = GeminiService.fromSettings(_settingsService!);
+    // Restore previously caught creatures from disk
+    _loadCreatures();
+  }
+
+  /// Load saved creatures from persistent catalog.
+  Future<void> _loadCreatures() async {
+    final loaded = await _pokedexStorage.loadCreatures();
+    if (!mounted) return;
+    setState(() {
+      _creatures.clear();
+      _creatures.addAll(loaded);
+      _currentIndex = 0;
+    });
   }
 
   Future<void> _reloadServices() async {
@@ -57,7 +67,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _handleAddPhoto() async {
-    // Show dialog to select image source
     final imageSource = await showDialog<ImageSource>(
       context: context,
       builder: (context) => AlertDialog(
@@ -79,9 +88,9 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-    
+
     if (imageSource == null) return;
-    
+
     final image = await _picker.pickImage(
       source: imageSource,
       preferredCameraDevice: CameraDevice.rear,
@@ -92,41 +101,7 @@ class _HomePageState extends State<HomePage> {
         _photos.clear();
         _photos.add(image);
       });
-      // Immediately show dialog for description
-      _showDescriptionDialog();
-    }
-  }
-
-  Future<void> _showDescriptionDialog() async {
-    final descController = TextEditingController();
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Describe the creature'),
-        content: TextField(
-          controller: descController,
-          decoration: const InputDecoration(
-            hintText: 'e.g., "striped tiger cub"',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Generate'),
-          ),
-        ],
-      ),
-    );
-    
-    if (result == true && mounted) {
-      _descController.text = descController.text;
-      await _handleGenerate();
+      _handleGenerate();
     }
   }
 
@@ -146,7 +121,6 @@ class _HomePageState extends State<HomePage> {
         description: description,
       );
 
-      // Post-process: white→transparent + resize to 128x32
       final processedBytes = await processSpriteSheet(result.imageBytes);
       final savedPath = await _storage.savePngBytes(processedBytes);
 
@@ -166,9 +140,13 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         _creatures.insert(0, c);
+        _currentIndex = 0;
         _photos.clear();
         _descController.clear();
       });
+
+      // Persist immediately after adding a new creature
+      unawaited(_pokedexStorage.saveCreatures(_creatures));
     } catch (e) {
       _showSnack('Generation failed: $e');
     } finally {
@@ -182,105 +160,78 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _navigateLeft() {
+    if (_creatures.length <= 1) return;
+    setState(() {
+      _currentIndex = (_currentIndex - 1 + _creatures.length) % _creatures.length;
+    });
+  }
+
+  void _navigateRight() {
+    if (_creatures.length <= 1) return;
+    setState(() {
+      _currentIndex = (_currentIndex + 1) % _creatures.length;
+    });
+  }
+
+  void _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        _navigateLeft();
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        _navigateRight();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currentCreature = _creatures.isNotEmpty ? _creatures.first : null;
+    final currentCreature = _creatures.isNotEmpty ? _creatures[_currentIndex] : null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFDC0A2D), // Pokedex Red
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with lens and lights
-            PokedexHeader(
-              onSettingsPressed: () async {
-                if (_settingsService != null) {
-                  final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => SettingsPage(settings: _settingsService!),
-                    ),
-                  );
-                  if (changed == true) {
-                    await _reloadServices();
-                  }
-                }
-              },
-              onBattlePressed: _creatures.length >= 2
-                  ? () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BattlePage(
-                            player: _creatures[0],
-                            opponent: _creatures[1],
-                          ),
-                        ),
-                      );
+    return KeyboardListener(
+      onKeyEvent: _onKeyEvent,
+      focusNode: FocusNode(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFDC0A2D),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header with lens, title, and settings
+              PokedexHeader(
+                onSettingsPressed: () async {
+                  if (_settingsService != null) {
+                    final changed = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => SettingsPage(settings: _settingsService!),
+                      ),
+                    );
+                    if (changed == true) {
+                      await _reloadServices();
                     }
-                  : () => _showSnack('Generate at least 2 creatures to battle!'),
-              canBattle: _creatures.length >= 2,
-            ),
-            
-            // Main screen area
-            Expanded(
-              child: PokedexScreen(
-                creature: currentCreature,
-                isGenerating: _isGenerating,
-                showStats: _showStats,
-                creatureIndex: _creatures.indexOf(currentCreature ?? Creature(
-                  id: '',
-                  name: '',
-                  primaryType: CreatureType.beast,
-                  secondaryType: null,
-                  stats: const CreatureStats(hp: 0, attack: 0, defense: 0, speed: 0),
-                  imagePath: '',
-                  originalPhotoPaths: [],
-                  createdAt: DateTime.now(),
-                  flavorText: '',
-                )),
+                  }
+                },
               ),
-            ),
-            
-            // Bottom info panel
-            InfoPanel(
-              creatureCount: _creatures.length,
-              gymBadges: _gymBadges,
-              battlesWon: _battlesWon,
-              battlesLost: _battlesLost,
-            ),
-            
-            // Control panel with buttons
-            ControlPanel(
-              onCapturePressed: _handleAddPhoto,
-              onDPadUp: () {
-                if (_creatures.length > 1) {
-                  setState(() {
-                    final creature = _creatures.removeAt(0);
-                    _creatures.add(creature);
-                  });
-                }
-              },
-              onDPadDown: () {
-                if (_creatures.length > 1) {
-                  setState(() {
-                    final creature = _creatures.removeLast();
-                    _creatures.insert(0, creature);
-                  });
-                }
-              },
-              onDPadLeft: () {},
-              onDPadRight: () {},
-              onAPressed: () {
-                setState(() {
-                  _showStats = !_showStats;
-                });
-              },
-            ),
-          ],
+
+              // Main screen area
+              Expanded(
+                child: PokedexScreen(
+                  creature: currentCreature,
+                  isGenerating: _isGenerating,
+                  creatureIndex: _currentIndex,
+                  creatureCount: _creatures.length,
+                ),
+              ),
+
+              // Control panel
+              ControlPanel(
+                onCapturePressed: _handleAddPhoto,
+                onDPadLeft: _navigateLeft,
+                onDPadRight: _navigateRight,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-
-
