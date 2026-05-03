@@ -268,11 +268,12 @@ CRITICAL REQUIREMENTS:
 - Canvas: EXACTLY 256 pixels wide x 64 pixels tall
 - Layout: 4 animation frames displayed horizontally side by side, each frame is 64 x 64 pixels
 - Frame positions: Frame 1 (x:0-63), Frame 2 (x:64-127), Frame 3 (x:128-191), Frame 4 (x:192-255)
-- Background: Pure white (#FFFFFF) - this will be made transparent later
+- Background: SOLID, UNIFORM Pure white (#FFFFFF) — every single background pixel must be exactly #FFFFFF, no exceptions
+- Margin: Leave at least 4 pixels of pure white (#FFFFFF) border around the creature on ALL sides — the creature must NEVER touch the canvas edge
 - Style: Classic 16-bit JRPG pixel art (like Pokemon Gen 2-3)
 
 PIXEL ART RULES:
-- NO anti-aliasing or blur effects
+- NO anti-aliasing or blur effects — especially NO gray/semi-transparent pixels at the creature-to-background boundary
 - NO gradients (use dithering patterns if needed)
 - Sharp, crisp edges on every pixel
 - Limited color palette matching the specified colors above
@@ -280,8 +281,9 @@ PIXEL ART RULES:
 - The creature should be centered in each 64 x 64 frame
 - Maintain consistent size and position across all frames
 - Use dithering for shading, not smooth gradients
-- The creature itself must NOT use pure white pixels - use off-white or light grays
-- Only the background should be pure white (#FFFFFF)
+- The creature itself must NOT use pure white (#FFFFFF) or near-white pixels (#F0F0F0 or brighter) — use mid-tone grays or off-whites (#E0E0E0 or darker) for highlights
+- Only the background area should be pure white (#FFFFFF)
+- NO anti-aliased edge pixels: the transition from creature to background must be a hard, single-pixel boundary — no intermediate gray pixels
 
 OUTLINE RULES (CRITICAL):
 - Use dark outlines ONLY for internal features (eyes, mouth, limb separations, wing segments)

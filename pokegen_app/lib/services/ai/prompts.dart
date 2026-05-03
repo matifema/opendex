@@ -1,6 +1,5 @@
 const String pixelArtStyleGuidelines = '''
 Generate a pixel-art sprite sheet of a fantasy creature in the aesthetic of 16-bit RPGs:
-- Output MUST be a PNG with a 100% transparent background.
 - Canvas Size: 256x64 pixels.
 - Layout: 4 frames of 64x64 pixels arranged horizontally.
 - Content: An idle animation loop of the creature (e.g., breathing, bobbing, tail wag).
