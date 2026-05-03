@@ -1,0 +1,21 @@
+# Flutter platform boilerplate (auto-generated)
+android/
+ios/
+linux/
+macos/
+windows/
+web/
+
+# Build artifacts
+.dart_tool/
+build/
+
+# IDE / OS files
+*.iml
+.DS_Store
+
+# Node modules (from earlier experiment)
+node_modules/
+
+# Docs
+docs/
