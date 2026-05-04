@@ -12,7 +12,7 @@ Capture an animal photo → generate a unique 1st‑gen Pokémon–style pixel c
 
 ## Features
 
-- **Photo Capture** — Take one or more photos of any animal
+- **Photo Capture** — Take a photo of any animal
 - **AI Analysis** — Get creature stats (HP, Attack, Defense, Speed), dual types, species name, and flavor text from `gemini-3.1-flash-lite-preview`
 - **Sprite Generation** — Produce a 4-frame walking animation sprite sheet via `gemini-3.1-flash-image-preview`
 - **Post-Processing** — White-to-transparent conversion + nearest-neighbor resize for crisp pixel art
