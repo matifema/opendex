@@ -21,18 +21,7 @@ Capture an animal photo → generate a unique 1st‑gen Pokémon–style pixel c
 - **Creature Release** — Delete creatures you no longer want from your collection
 - **Full Client-Side** — No server needed. API key passed at runtime or stored in settings
 
-## Screenshots
-
-The app renders a Pokedex-shaped interface with:
-
-| Component | Details |
-|-----------|---------|
-| **Header** | Pokedex logo + real-time species count ticker |
-| **LCD Display** | Scrollable creature info panel with type badges, avatar, stats bars, Pokéball icon buttons for original photo view, and animated sprite playback |
-| **DPad Navigation** | 4-way d-pad with bevel styling — left/right browse creatures, up/down scroll the LCD |
-| **Capture Button** | Center pokeball button opens camera picker |
-
-## Quick Start
+## Development Quick Start
 
 ### Prerequisites
 
@@ -55,11 +44,6 @@ flutter run --dart-define=GEMINI_API_KEY=your_key_here
 # Or enter the key inside the app's Settings screen
 flutter run
 ```
-
-### Platform Permissions
-
-- **Android**: Ensure `<uses-permission android:name="android.permission.CAMERA" />` is declared in `android/app/src/main/AndroidManifest.xml`
-- **iOS**: Add `NSCameraUsageDescription` and `NSPhotoLibraryAddUsageDescription` to `ios/Runner/Info.plist`
 
 ## Architecture
 
