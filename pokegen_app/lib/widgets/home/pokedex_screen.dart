@@ -50,10 +50,50 @@ class PokedexScreen extends StatefulWidget {
   });
 
   @override
-  State<PokedexScreen> createState() => _PokedexScreenState();
+  State<PokedexScreen> createState() => PokedexScreenState();
 }
 
-class _PokedexScreenState extends State<PokedexScreen> {
+class PokedexScreenState extends State<PokedexScreen> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Scroll the LCD content up by one section.
+  void scrollUp() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final current = _scrollController.offset;
+    final target = (current - 120).clamp(0.0, _scrollController.position.maxScrollExtent);
+    if (target == current) return;
+    _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
+  /// Scroll the LCD content down by one section.
+  void scrollDown() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final current = _scrollController.offset;
+    final target = (current + 120).clamp(0.0, _scrollController.position.maxScrollExtent);
+    if (target == current) return;
+    _scrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
+  }
+
   // ─── Original Photo Dialog (Pokédex-themed) ──────────────────────────────
   void _showOriginalPhoto(BuildContext context, String photoPath) {
     showDialog(
@@ -187,12 +227,12 @@ class _PokedexScreenState extends State<PokedexScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                const SizedBox(
                   width: 40,
                   height: 40,
                   child: CircularProgressIndicator(
                     strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(_kPokedexRed),
+                    valueColor: AlwaysStoppedAnimation(_kPokedexRed),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -203,6 +243,7 @@ class _PokedexScreenState extends State<PokedexScreen> {
         }
 
         return SingleChildScrollView(
+          controller: _scrollController,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(
@@ -259,10 +300,6 @@ class _PokedexScreenState extends State<PokedexScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 12),
-
-                // ── Species Counter (LCD footer) ──────────────────────────
-                _buildSpeciesCounter(widget.creatureCount),
               ],
             ),
           ),
@@ -625,31 +662,6 @@ class _PokedexScreenState extends State<PokedexScreen> {
               textAlign: TextAlign.center,
               style: _pixelText(fontSize: 14, color: _kLcdTextDark),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─── Species Counter (LCD footer) ──────────────────────────────────────
-  Widget _buildSpeciesCounter(int count) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: const Color(0xFF555555), width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'SPECIES CAUGHT',
-            style: _pixelText(fontSize: 13, color: const Color(0xFF33FF33)),
-          ),
-          const Spacer(),
-          Text(
-            count.toString().padLeft(3, '0'),
-            style: _pixelText(fontSize: 16, color: const Color(0xFF33FF33), fontWeight: FontWeight.bold),
           ),
         ],
       ),

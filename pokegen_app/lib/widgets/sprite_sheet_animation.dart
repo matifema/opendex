@@ -35,16 +35,6 @@ class _SpriteSheetAnimationState extends State<SpriteSheetAnimation> {
     _playOneCycle();
   }
 
-  void _startLoopingAnimation() {
-    _timer = Timer.periodic(widget.frameDuration, (timer) {
-      if (mounted) {
-        setState(() {
-          _currentFrame = (_currentFrame + 1) % widget.frameCount;
-        });
-      }
-    });
-  }
-
   void _playOneCycle() {
     if (_isPlaying) return; // Prevent multiple taps during animation
     

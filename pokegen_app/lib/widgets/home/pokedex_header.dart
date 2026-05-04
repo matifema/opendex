@@ -2,17 +2,19 @@ import 'package:flutter/material.dart';
 
 class PokedexHeader extends StatelessWidget {
   final VoidCallback onSettingsPressed;
+  final int creatureCount;
 
   const PokedexHeader({
     super.key,
     required this.onSettingsPressed,
+    this.creatureCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return SizedBox(
-      height: 120,
+      height: 128,
       child: CustomPaint(
         painter: PokedexHeaderPainter(),
         child: Padding(
@@ -42,6 +44,25 @@ class PokedexHeader extends StatelessWidget {
                               blurRadius: 4,
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(color: const Color(0xFF555555), width: 1),
+                      ),
+                      child: Text(
+                        'SPECIES: ${creatureCount.toString().padLeft(3, '0')}',
+                        style: const TextStyle(
+                          fontFamily: 'VT323',
+                          fontSize: 13,
+                          color: Color(0xFF33FF33),
+                          letterSpacing: 1,
+                          height: 1.2,
                         ),
                       ),
                     ),

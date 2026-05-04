@@ -32,6 +32,8 @@ class _HomePageState extends State<HomePage> {
   final List<Creature> _creatures = [];
   int _currentIndex = 0;
 
+  final _pokedexScreenKey = GlobalKey<PokedexScreenState>();
+
   GeminiService? _geminiService;
   final _storage = StorageService();
   final _pokedexStorage = PokedexStorageService();
@@ -174,6 +176,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _scrollUp() {
+    _pokedexScreenKey.currentState?.scrollUp();
+  }
+
+  void _scrollDown() {
+    _pokedexScreenKey.currentState?.scrollDown();
+  }
+
   /// Release (delete) the currently viewed creature.
   Future<void> _handleRelease() async {
     if (_currentIndex < 0 || _currentIndex >= _creatures.length) return;
@@ -233,6 +243,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               // Header with lens, title, and settings
               PokedexHeader(
+                creatureCount: _creatures.length,
                 onSettingsPressed: () async {
                   if (_settingsService != null) {
                     final changed = await Navigator.of(context).push<bool>(
@@ -250,6 +261,7 @@ class _HomePageState extends State<HomePage> {
               // Main screen area
               Expanded(
                 child: PokedexScreen(
+                  key: _pokedexScreenKey,
                   creature: currentCreature,
                   isGenerating: _isGenerating,
                   creatureIndex: _currentIndex,
@@ -263,6 +275,8 @@ class _HomePageState extends State<HomePage> {
                 onCapturePressed: _handleAddPhoto,
                 onDPadLeft: _navigateLeft,
                 onDPadRight: _navigateRight,
+                onDPadUp: _scrollUp,
+                onDPadDown: _scrollDown,
               ),
             ],
           ),
