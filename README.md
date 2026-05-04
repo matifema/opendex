@@ -1,85 +1,136 @@
-# PokéSnap PixelMon (Flutter)
+# Opéndex
 
-Capture one or more photos of an animal with the device camera, generate a 1st‑gen Pokémon–style pixel creature with a transparent PNG, and auto-generate a name and stats.
+Capture an animal photo → generate a unique 1st‑gen Pokémon–style pixel creature with transparent PNG sprite sheet, auto-generated name, stats, types, and flavor text. All running entirely on-device via Google's Gemini API.
 
-All AI generation runs **client-side** via the Gemini API — no backend server required.
+<div align="center">
 
----
+**Flutter · Gemini AI · No Backend Required**
 
-## Setup (Linux/Ubuntu)
-
-1) Install Flutter SDK and Android tooling
-- Install Flutter via snap:
-  - `sudo snap install flutter --classic`
-- Enable Flutter SDK:
-  - `flutter --version`
-  - `flutter doctor`
-- Install Android Studio or SDK tools if prompted by `flutter doctor` and accept licenses:
-  - `flutter doctor --android-licenses`
-
-2) Create platform scaffolding
-- Navigate to the app folder:
-  - `cd pokegen_app`
-- If you did not create a Flutter project yet in this folder, initialize:
-  - `flutter create .`
-- Fetch dependencies:
-  - `flutter pub get`
-
-3) Configure environment
-- Provide your Gemini API key via `--dart-define` at run time:
-  - `GEMINI_API_KEY=<your gemini key>`
-- Example run:
-  - `flutter run --dart-define=GEMINI_API_KEY=sk-...`
-- Or enter the key in the app's Settings screen at runtime.
-
-4) Platform permissions
-- Android: Edit `android/app/src/main/AndroidManifest.xml` and add within `<manifest>`:
-  ```
-  <uses-permission android:name="android.permission.CAMERA" />
-  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-  ```
-  Inside `<application>` ensure a FileProvider if you customize camera storage.
-- iOS: In `ios/Runner/Info.plist`, add:
-  ```
-  <key>NSCameraUsageDescription</key>
-  <string>We use the camera to capture animal photos.</string>
-  <key>NSPhotoLibraryAddUsageDescription</key>
-  <string>We save your generated pixel monsters.</string>
-  ```
+</div>
 
 ---
 
-## How it works
+## Features
 
-- **Capture Photos**: Uses `image_picker` to take one or more photos.
-- **Analyze & Generate Stats**: Sends the photo + description to `gemini-3.1-flash-lite-preview` (multimodal) to get creature stats, types, flavor text, and a visual spec — all as structured JSON. Includes a safety check that rejects human photos.
-- **Generate Sprite Sheet**: Sends the visual spec to `gemini-3.1-flash-image-preview` to produce a 4-frame pixel art sprite sheet (128×32 px).
-- **Post-Process**: Converts the white background to transparent and resizes to exactly 128×32 using nearest-neighbor interpolation (crisp pixels).
-- **Move Selection**: Assigns 4 Gen 1-style moves based on the creature's types (type-matching damaging + status + coverage).
-- **Storage & Animation**: Saves the PNG locally with a Pokéball-themed capture animation overlay during generation.
+- **Photo Capture** — Take one or more photos of any animal
+- **AI Analysis** — Get creature stats (HP, Attack, Defense, Speed), dual types, species name, and flavor text from `gemini-3.1-flash-lite-preview`
+- **Sprite Generation** — Produce a 4-frame walking animation sprite sheet via `gemini-3.1-flash-image-preview`
+- **Post-Processing** — White-to-transparent conversion + nearest-neighbor resize for crisp pixel art
+- **Move Selection** — Auto-assigns 4 Gen 1-style moves based on creature types
+- **Pokedex UI** — Retro-styled device with D-pad navigation (left/right browsing, up/down scrolling), LCD display, and persistent library
+- **Creature Release** — Delete creatures you no longer want from your collection
+- **Full Client-Side** — No server needed. API key passed at runtime or stored in settings
 
-Files of interest:
-- `pokegen_app/lib/pages/home_page.dart` – camera flow and UI
-- `pokegen_app/lib/services/ai/gemini_service.dart` – Gemini API calls (analysis + image generation)
-- `pokegen_app/lib/services/ai/image_processor.dart` – white→transparent + resize post-processing
-- `pokegen_app/lib/services/ai/move_database.dart` – Gen 1 move database + type-based selection
-- `pokegen_app/lib/models/pokemon_models.dart` – data models
-- `docs/data-models.md` – Mermaid diagrams
-- `docs/prompts.md` – replicated prompts
+## Screenshots
 
----
+The app renders a Pokedex-shaped interface with:
 
-## AI Models
+| Component | Details |
+|-----------|---------|
+| **Header** | Pokedex logo + real-time species count ticker |
+| **LCD Display** | Scrollable creature info panel with type badges, avatar, stats bars, Pokéball icon buttons for original photo view, and animated sprite playback |
+| **DPad Navigation** | 4-way d-pad with bevel styling — left/right browse creatures, up/down scroll the LCD |
+| **Capture Button** | Center pokeball button opens camera picker |
 
-| Step | Model | Purpose |
-|------|-------|---------|
-| Analysis | `gemini-3.1-flash-lite-preview` | Multimodal (photo + text) → JSON stats, types, visual spec, safety check |
-| Image | `gemini-3.1-flash-image-preview` | Text prompt → 4-frame pixel art sprite sheet (PNG) |
+## Quick Start
 
-Both models are accessed via the `firebase_ai` Dart SDK using `FirebaseAI.googleAI()` (Gemini Developer API).
+### Prerequisites
 
----
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (`>=3.4.0`)
+- Android SDK / Xcode (for mobile target)
+
+### Setup
+
+```bash
+cd pokegen_app
+flutter pub get
+```
+
+### Run
+
+```bash
+# Via CLI flag
+flutter run --dart-define=GEMINI_API_KEY=your_key_here
+
+# Or enter the key inside the app's Settings screen
+flutter run
+```
+
+### Platform Permissions
+
+- **Android**: Ensure `<uses-permission android:name="android.permission.CAMERA" />` is declared in `android/app/src/main/AndroidManifest.xml`
+- **iOS**: Add `NSCameraUsageDescription` and `NSPhotoLibraryAddUsageDescription` to `ios/Runner/Info.plist`
+
+## Architecture
+
+```
+pokegen_app/lib/
+├── model/         # Data models (Creature, Stats, Move, etc.)
+├── pages/
+│   ├── home_page.dart    # Main camera flow and navigation shell
+│   └── settings_page.dart# API key input & preferences
+├── services/
+│   ├── ai/
+│   │   ├── gemini_service.dart       # Gemini API client — analysis + image gen
+│   │   ├── image_processor.dart      # White-bg → transparent + resize pipeline
+│   │   └── move_database.dart        # Gen 1 move pool + type-based selection
+│   └── storage/                        # Local persistence (shared_preferences, FileService, PokedexStorage)
+├── widgets/
+│   ├── home/
+│   │   ├── pokedex_screen.dart     # Device body with LCD screen + controls
+│   │   ├── pokedex_header.dart      # Title bar + species counter
+│   │   └── control_panel.dart       # Capture button + d-pad widget
+│   └── sprite_sheet_animation.dart  # Animated sprite playback widget
+└── utils/
+    └── constants.dart           # Typedefs for dart-define API keys & config
+```
+
+## Generation Pipeline
+
+```
+[User Photo] → Gemini Multimodal (Analysis)
+                  │
+                  ├→ Creature name, types (e.g., Fire/Psychic)
+                  ├→ Base stats (HP, Attack, Defense, Speed, SpAtk, SpDef)
+                  ├→ Flavor text
+                  ├→ Visual description spec (color, anatomy, pose)
+                  └→ Safety filter (rejects human faces)
+
+
+  [Visual Spec] → Gemini Image Generation
+                    │
+                    └→ 4-frame sprite sheet (256×64 px PNG, white background)
+                         ↓
+              Image Post-Processing (image package)
+                         ↓
+              White-to-transparent + nearest-neighbor resize
+                         ↓
+                 256×64 transparent sprite sheet
+
+
+  [Types] → Move Database
+                    │
+                    └→ 4 moves: STAB × 2 + Coverage + Status
+```
+
+## Project Structure
+
+| Path | Purpose |
+|------|---------|
+| `docs/data-models.md` | Mermaid diagrams of Creature/Stats/Move schema |
+| `docs/prompts.md` | Replicated system prompts used in generation |
+
+## Dependencies
+
+| Package | Version | Use |
+|---------|---------|-----|
+| `google_generative_ai` | ^0.4.7 | Gemini API client |
+| `image_picker` | ^1.1.2 | Camera/photo picker |
+| `image` | ^4.5.4 | Pixel processing (transparency, resize) |
+| `shared_preferences` | ^2.2.2 | Persistence (API key, creature registry) |
+| `path_provider` | ^2.1.3 | Storage directory resolution |
+| `google_fonts` | ^6.2.1 | Custom fonts (VT323 pixel font) |
 
 ## Disclaimer
 
-This project is fan-themed and not affiliated with or endorsed by The Pokémon Company, Nintendo, Game Freak, or Creatures Inc. Use responsibly and respect IP when distributing assets.
+Opéndex is a fan-made project not affiliated with, endorsed by, or connected to The Pokémon Company, Nintendo, Game Freak, or Creatures Inc. All generated creatures are original creations inspired by Gen 1 aesthetics. Generated assets should not be used commercially.
