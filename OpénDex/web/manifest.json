@@ -1,11 +1,11 @@
 {
-    "name": "pokegen_app",
-    "short_name": "pokegen_app",
+    "name": "OpénDex",
+    "short_name": "OpénDex",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#32323e",
+    "theme_color": "#dc2832",
+    "description": "Capture an animal photo → generate a unique 1st-gen Pokémon–style pixel creature.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

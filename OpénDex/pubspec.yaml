@@ -1,5 +1,5 @@
-name: pokegen_app
-description: Capture animal photos and generate 1st-gen Pokémon–style pixel monsters with transparent PNG output and auto-generated stats.
+name: opendex
+description: Capture an animal photo → generate a unique 1st-gen Pokémon–style pixel creature with transparent PNG sprite sheet, auto-generated name, stats, types, and flavor text.
 publish_to: "none"
 version: 0.1.0+1
 
@@ -22,6 +22,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/pokeball_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/pokeball_icon.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

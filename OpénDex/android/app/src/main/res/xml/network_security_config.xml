@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">fonts.googleapis.com</domain>
+        <domain includeSubdomains="true">fonts.gstatic.com</domain>
+        <domain includeSubdomains="true">generativelanguage.googleapis.com</domain>
+    </domain-config>
+    <!-- Allow all cleartext traffic (needed for google_fonts CDN + Gemini API) -->
+    <base-config cleartextTrafficPermitted="true"/>
+</network-security-config>

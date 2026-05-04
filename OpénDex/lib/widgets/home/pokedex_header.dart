@@ -58,7 +58,6 @@ class PokedexHeader extends StatelessWidget {
                       child: Text(
                         'SPECIES: ${creatureCount.toString().padLeft(3, '0')}',
                         style: const TextStyle(
-                          fontFamily: 'VT323',
                           fontSize: 13,
                           color: Color(0xFF33FF33),
                           letterSpacing: 1,

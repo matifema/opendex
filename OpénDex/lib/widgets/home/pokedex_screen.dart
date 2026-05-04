@@ -25,7 +25,6 @@ TextStyle _pixelText({
   Color? color,
   FontWeight? fontWeight,
 }) => TextStyle(
-  fontFamily: 'VT323',
   fontSize: fontSize,
   color: color ?? _kLcdTextDark,
   fontWeight: fontWeight ?? FontWeight.normal,
