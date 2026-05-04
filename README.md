@@ -88,29 +88,34 @@ pokegen_app/lib/
 ## Generation Pipeline
 
 ```
-[User Photo] → Gemini Multimodal (Analysis)
-                  │
-                  ├→ Creature name, types (e.g., Fire/Psychic)
-                  ├→ Base stats (HP, Attack, Defense, Speed, SpAtk, SpDef)
-                  ├→ Flavor text
-                  ├→ Visual description spec (color, anatomy, pose)
-                  └→ Safety filter (rejects human faces)
+[Photo] + [Source Description] → Gemini Multimodal (gemini-3.1-flash-lite-preview)
+                     │
+                     ├→ Animal detection (rejects non-animal photos)
+                     ├→ Creature name (~inspired by subject + elemental fusion)
+                     ├→ Type pair (e.g., Fire / Psychic) from 10-type pool
+                     ├→ Stats (HP, Attack, Defense, Speed; range 30–100)
+                     ├→ Flavor text
+                     ├→ Rich creature description (body shape, colors, effects)
+                     └→ Visual spec (palette hexes, 4-frame idle loop breakdown)
+                                 │
+                                 ↓
+             [Creature Description + Visual Spec] → Gemini Image (gemini-3.1-flash-image) via REST API
+                                 │
+                                 └→ 4-frame sprite sheet (256×64 px PNG, solid white bg)
+                                          ↓
+                          Image Post-Processing (image_processor.dart)
+                                          │
+                                          ├→ Chrominance-aware flood-fill from canvas edges → alpha mask
+                                          ├→ Morphological close (dilate + erode) for edge smoothing
+                                          ├→ Saturation guard preserves character highlights
+                                          └→ Nearest-neighbor resize to 256×64
+                                          ↓
+                              256×64 transparent walking-sprite sheet
+                              
 
-
-  [Visual Spec] → Gemini Image Generation
-                    │
-                    └→ 4-frame sprite sheet (256×64 px PNG, white background)
-                         ↓
-              Image Post-Processing (image package)
-                         ↓
-              White-to-transparent + nearest-neighbor resize
-                         ↓
-                 256×64 transparent sprite sheet
-
-
-  [Types] → Move Database
-                    │
-                    └→ 4 moves: STAB × 2 + Coverage + Status
+                           [Type Pair] → Move Database
+                                          │
+                                          └→ 4 moves: 2× STAB + 1× Coverage + 1× Status
 ```
 
 ## Project Structure
