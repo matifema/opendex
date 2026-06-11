@@ -8,13 +8,14 @@ import 'package:image_picker/image_picker.dart';
 import '../models/pokemon_models.dart';
 import '../services/ai/gemini_service.dart';
 import '../services/ai/image_processor.dart';
-import '../services/storage_service.dart';
 import '../services/pokedex_storage_service.dart';
+import '../services/settings_service.dart';
+import '../services/storage_service.dart';
+import '../widgets/dex_open_animation.dart';
 import '../widgets/home/control_panel.dart';
 import '../widgets/home/pokedex_header.dart';
 import '../widgets/home/pokedex_screen.dart';
 import 'settings_page.dart';
-import '../services/settings_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -29,6 +30,7 @@ class _HomePageState extends State<HomePage> {
   final _descController = TextEditingController(text: '');
 
   bool _isGenerating = false;
+  bool _isOpening = false;
   final List<Creature> _creatures = [];
   int _currentIndex = 0;
 
@@ -68,33 +70,16 @@ class _HomePageState extends State<HomePage> {
     _geminiService = GeminiService.fromSettings(_settingsService!);
   }
 
-  Future<void> _handleAddPhoto() async {
-    final imageSource = await showDialog<ImageSource>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose Image Source'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _handleAddPhoto() {
+    setState(() {
+      _isOpening = true;
+    });
+  }
 
-    if (imageSource == null) return;
-
+  Future<void> _showCameraDialog() async {
+    // Always use camera directly — no choice dialog
     final image = await _picker.pickImage(
-      source: imageSource,
+      source: ImageSource.camera,
       preferredCameraDevice: CameraDevice.rear,
       imageQuality: 100,
     );
@@ -103,12 +88,14 @@ class _HomePageState extends State<HomePage> {
         _photos.clear();
         _photos.add(image);
       });
+      // Small delay for UX - let the user see the photo was picked
+      await Future.delayed(const Duration(milliseconds: 300));
       _handleGenerate();
     }
   }
 
   Future<void> _handleGenerate() async {
-    final description = _descController.text.trim().isEmpty ? 'a real-world animal' : _descController.text.trim();
+    final description = _descController.text.trim().isEmpty ? 'the subject in the photo' : _descController.text.trim();
     if (_photos.isEmpty) {
       _showSnack('Take a photo first!');
       return;
@@ -150,7 +137,8 @@ class _HomePageState extends State<HomePage> {
       // Persist immediately after adding a new creature
       unawaited(_pokedexStorage.saveCreatures(_creatures));
     } catch (e) {
-      _showSnack('Generation failed: $e');
+      debugPrint('Generation error: $e');
+      _showSnack('Generation failed, please try again.');
     } finally {
       if (mounted) {
         setState(() => _isGenerating = false);
@@ -159,7 +147,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontFamily: 'VT323',
+            fontSize: 16,
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: Color(0xFF5A6E5A), width: 2),
+        ),
+        backgroundColor: const Color(0xFF78A878),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _navigateLeft() {
@@ -225,6 +230,10 @@ class _HomePageState extends State<HomePage> {
         _navigateLeft();
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         _navigateRight();
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _scrollUp();
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _scrollDown();
       }
     }
   }
@@ -239,45 +248,61 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFDC0A2D),
         body: SafeArea(
-          child: Column(
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Header with lens, title, and settings
-              PokedexHeader(
-                creatureCount: _creatures.length,
-                onSettingsPressed: () async {
-                  if (_settingsService != null) {
-                    final changed = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => SettingsPage(settings: _settingsService!),
-                      ),
-                    );
-                    if (changed == true) {
-                      await _reloadServices();
-                    }
-                  }
-                },
+              // ── Main UI ──────────────────────────────────────
+              Column(
+                children: [
+                  // Header with lens, title, and settings
+                  PokedexHeader(
+                    onSettingsPressed: () async {
+                      if (_settingsService != null) {
+                        final changed = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => SettingsPage(settings: _settingsService!),
+                          ),
+                        );
+                        if (changed == true) {
+                          await _reloadServices();
+                        }
+                      }
+                    },
+                  ),
+
+                  // Main screen area
+                  Expanded(
+                    child: PokedexScreen(
+                      key: _pokedexScreenKey,
+                      creature: currentCreature,
+                      isGenerating: _isGenerating,
+                      creatureIndex: _currentIndex,
+                      creatureCount: _creatures.length,
+                      onReleasePressed: _creatures.isNotEmpty ? _handleRelease : null,
+                      onSwipeLeft: _navigateLeft,
+                      onSwipeRight: _navigateRight,
+                    ),
+                  ),
+
+                  // Control panel
+                  ControlPanel(
+                    onCapturePressed: _handleAddPhoto,
+                    onDPadLeft: _navigateLeft,
+                    onDPadRight: _navigateRight,
+                    onDPadUp: _scrollUp,
+                    onDPadDown: _scrollDown,
+                  ),
+                ],
               ),
 
-              // Main screen area
-              Expanded(
-                child: PokedexScreen(
-                  key: _pokedexScreenKey,
-                  creature: currentCreature,
-                  isGenerating: _isGenerating,
-                  creatureIndex: _currentIndex,
-                  creatureCount: _creatures.length,
-                  onReleasePressed: _creatures.isNotEmpty ? _handleRelease : null,
+              // ── Pokédex Opening Animation Overlay ────────────
+              if (_isOpening)
+                DexOpenAnimation(
+                  onComplete: () {
+                    setState(() => _isOpening = false);
+                    _showCameraDialog();
+                  },
                 ),
-              ),
-
-              // Control panel
-              ControlPanel(
-                onCapturePressed: _handleAddPhoto,
-                onDPadLeft: _navigateLeft,
-                onDPadRight: _navigateRight,
-                onDPadUp: _scrollUp,
-                onDPadDown: _scrollDown,
-              ),
             ],
           ),
         ),

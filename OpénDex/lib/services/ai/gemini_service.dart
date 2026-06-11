@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 
 import '../../models/pokemon_models.dart';
 import '../settings_service.dart';
-import 'no_animal_detected_exception.dart';
 import 'move_database.dart';
 
 /// Direct Gemini API service using the classic google_generative_ai SDK.
@@ -61,31 +60,11 @@ class GeminiService {
     // --- Step 1: Analysis & Spec Generation ---
     final spec = await _analyzePhoto(photo, description);
 
-    // --- Step 1.5: Select Moves ---
-    final moves = MoveDatabase.selectMovesForCreature(
-      spec.primaryType,
-      spec.secondaryType,
-    );
-
-    final specWithMoves = GeneratedSpec(
-      name: spec.name,
-      flavorText: spec.flavorText,
-      primaryType: spec.primaryType,
-      secondaryType: spec.secondaryType,
-      stats: spec.stats,
-      moves: moves,
-      creatureDescription: spec.creatureDescription,
-      visualSubject: spec.visualSubject,
-      visualPalette: spec.visualPalette,
-      visualAnimation: spec.visualAnimation,
-      visualDetails: spec.visualDetails,
-    );
-
     // --- Step 2: Image Generation ---
-    final imageBytes = await _generateImage(specWithMoves, description);
+    final imageBytes = await _generateImage(spec, description);
 
     return GenerationResult(
-      spec: specWithMoves,
+      spec: spec,
       imageBytes: imageBytes,
     );
   }
@@ -94,27 +73,24 @@ class GeminiService {
   Future<GeneratedSpec> _analyzePhoto(File photo, String description) async {
     final analysisPrompt = '''You are a retro game designer specializing in 16-bit pixel art creatures. Analyze this image and the user description: "$description".
 
-**TASK 1 - ANIMAL DETECTION:**
-Is this a photo that contains an animal (pet, wildlife, insect, bird, fish, reptile, amphibian, or any non-human creature)? If yes, set "hasAnimal" to true. If the photo contains only humans, objects, landscapes, buildings, or no animal at all, set "hasAnimal" to false.
-
-**TASK 2 - CREATURE STATS:**
-Generate creative fantasy creature stats inspired by the subject. The creature should feel like a Pokemon or fantasy RPG monster with:
+**TASK 1 - CREATURE STATS:**
+Generate creative fantasy creature stats inspired by the subject in the photo. The creature should feel like a Pokemon or fantasy RPG monster with:
 - A creative Name (inspired by the subject + elemental/attribute fusion)
 - 1-2 Types from this exact list: fire, water, earth, air, light, shadow, nature, metal, arcane, beast
 - Flavor text describing the creature's behavior or habitat (1-2 sentences)
 - Balanced stats: HP (30-100), Attack (20-80), Defense (20-80), Speed (20-80)
 
-**TASK 3 - CREATURE DESCRIPTION:**
-Write a RICH, DETAILED description of the creature's physical appearance as inspired by the source animal. This will be used to generate the sprite sheet. Include:
+**TASK 2 - CREATURE DESCRIPTION:**
+Write a RICH, DETAILED description of the creature's physical appearance as inspired by the subject in the photo. This will be used to generate the sprite sheet. Include:
 - Body shape, proportions, posture
 - Distinctive features (horns, wings, tail, fins, etc.)
 - Color patterns and markings
-- Texture details (scales, fur, feathers, slime, etc.)
+- Texture details (scales, fur, feathers, slime, stone, metal, etc.)
 - Expressive features (eyes, mouth, ears)
 - Any elemental/magical effects (flames, sparks, aura, glow)
-- How it relates to the original animal (what features are preserved, what are fantastical additions)
+- How it relates to the original subject (what features are preserved, what are fantastical additions)
 
-**TASK 4 - VISUAL SPECIFICATION FOR PIXEL ART:**
+**TASK 3 - VISUAL SPECIFICATION FOR PIXEL ART:**
 Create a DETAILED specification for generating a 4-frame pixel art sprite sheet (256x64 px total):
 
 - **Subject**: Describe the creature as a pixel art sprite (e.g., "A small fire salamander with flame tail")
@@ -138,7 +114,6 @@ Create a DETAILED specification for generating a 4-frame pixel art sprite sheet 
 
 Return ONLY valid JSON matching this schema:
 {
-  "hasAnimal": boolean,
   "stats": {
     "name": "string",
     "types": ["string", "string"],
@@ -168,16 +143,23 @@ Note: Moves will be automatically selected based on the creature's types.''';
       ]),
     ]);
 
-    final text = response.text;
+    var text = response.text;
     if (text == null || text.isEmpty) {
       throw StateError('Failed to analyze image: empty response from Gemini');
     }
 
-    final data = jsonDecode(text) as Map<String, dynamic>;
+    // Strip markdown code fences if the model wrapped JSON in them
+    text = text.trim();
+    if (text.startsWith('```')) {
+      text = text.replaceFirst(RegExp(r'^```(?:json)?\s*'), '');
+      text = text.replaceFirst(RegExp(r'\s*```$'), '');
+    }
 
-    // Check for animal detection
-    if (data['hasAnimal'] != true) {
-      throw NoAnimalDetectedException();
+    final Map<String, dynamic> data;
+    try {
+      data = jsonDecode(text) as Map<String, dynamic>;
+    } on FormatException catch (e) {
+      throw StateError('Could not parse creature data: $e');
     }
 
     // Parse stats
@@ -191,12 +173,8 @@ Note: Moves will be automatically selected based on the creature's types.''';
     final primaryType = types.isNotEmpty ? types.first : CreatureType.beast;
     final CreatureType? secondaryType = types.length > 1 ? types[1] : null;
 
-    final stats = CreatureStats(
-      hp: _clampStat(statsData['hp']),
-      attack: _clampStat(statsData['attack']),
-      defense: _clampStat(statsData['defense']),
-      speed: _clampStat(statsData['speed']),
-    );
+    final stats = CreatureStats.fromJson(statsData);
+    final moves = MoveDatabase.selectMovesForCreature(primaryType, secondaryType);
 
     // Extract visual spec fields
     final visualSpec = data['visualSpec'] as Map<String, dynamic>?;
@@ -215,6 +193,7 @@ Note: Moves will be automatically selected based on the creature's types.''';
       primaryType: primaryType,
       secondaryType: secondaryType,
       stats: stats,
+      moves: moves,
       creatureDescription: creatureDescription,
       visualSubject: visualSubject,
       visualPalette: visualPalette,
@@ -227,14 +206,26 @@ Note: Moves will be automatically selected based on the creature's types.''';
   ///
   /// Uses the raw HTTP API directly because google_generative_ai 0.4.7
   /// cannot parse inlineData parts in model responses (throws UnimplementedError).
+  /// Retries once on transient failures or when the model returns text-only.
   Future<Uint8List> _generateImage(GeneratedSpec spec, String sourceDescription) async {
+    try {
+      return await _generateImageOnce(spec, sourceDescription);
+    } on StateError catch (e) {
+      if (e.toString().contains('No image generated')) {
+        return await _generateImageOnce(spec, sourceDescription);
+      }
+      rethrow;
+    }
+  }
+
+  Future<Uint8List> _generateImageOnce(GeneratedSpec spec, String sourceDescription) async {
     final paletteStr = spec.visualPalette.isNotEmpty
         ? spec.visualPalette.join(', ')
         : 'appropriate 16-bit colors';
 
     final imagePrompt = '''You are an expert pixel artist creating a Pokemon-style sprite sheet. Generate the sprite sheet based on the EXACT specifications below.
 
-SOURCE INSPIRATION: The creature is inspired by this real animal: "$sourceDescription"
+SOURCE INSPIRATION: The creature is inspired by the subject in this photo: "$sourceDescription"
 
 CREATURE DESCRIPTION:
 ${spec.creatureDescription.isNotEmpty ? spec.creatureDescription : 'A ${spec.primaryType.name}${spec.secondaryType != null ? '/${spec.secondaryType!.name}' : ''} type fantasy creature named ${spec.name}.'}
@@ -380,13 +371,5 @@ Create a wide horizontal sprite sheet with 4 distinct idle animation frames show
       return 'image/gif';
     }
     return 'image/jpeg'; // Default fallback
-  }
-
-  /// Clamps a stat value to the valid range (1-255).
-  int _clampStat(dynamic value) {
-    if (value is num) {
-      return value.toInt().clamp(1, 255);
-    }
-    return 1;
   }
 }

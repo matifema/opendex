@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 const _kPokedexRed = Color(0xFFDC0A2D);
 const _kPokedexDarkRed = Color(0xFFB80828);
 const _kButtonRed = Color(0xFFE83050);
+const _kButtonRedDark = Color(0xFFC02040);
 const _kDPadColor = Color(0xFF2A2A2A);
 const _kDPadPressed = Color(0xFF3A3A3A);
 
@@ -33,13 +34,22 @@ class ControlPanel extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       height: 140,
       decoration: BoxDecoration(
-        color: _kPokedexRed,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [_kPokedexRed, _kPokedexDarkRed],
+        ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: _kPokedexRed.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -47,6 +57,11 @@ class ControlPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
+            // Decorative diagonal stripe
+            CustomPaint(
+              painter: _ControlPanelAccentPainter(),
+              size: Size.infinite,
+            ),
             // Recessed button area
             Positioned(
               top: 16,
@@ -55,13 +70,23 @@ class ControlPanel extends StatelessWidget {
               bottom: 12,
               child: Container(
                 decoration: BoxDecoration(
-                  color: _kPokedexDarkRed,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [_kPokedexDarkRed, Color(0xFF9E0620)],
+                  ),
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                    // Inner highlight
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      blurRadius: 2,
+                      offset: const Offset(0, -1),
                     ),
                   ],
                 ),
@@ -87,34 +112,84 @@ class ControlPanel extends StatelessWidget {
 }
 
 // ─── Capture Button ───────────────────────────────────────────────────────────
-class _CaptureButton extends StatelessWidget {
+class _CaptureButton extends StatefulWidget {
   final VoidCallback onPressed;
 
   const _CaptureButton({required this.onPressed});
 
   @override
+  State<_CaptureButton> createState() => _CaptureButtonState();
+}
+
+class _CaptureButtonState extends State<_CaptureButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressController;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.92).animate(
+      CurvedAnimation(parent: _pressController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(_) => _pressController.forward();
+  void _onTapUp(_) {
+    _pressController.reverse();
+    widget.onPressed();
+  }
+  void _onTapCancel() => _pressController.reverse();
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
-      child: SizedBox(
-        width: 64,
-        height: 64,
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _kButtonRed,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder: (context, child) => Transform.scale(
+          scale: _scale.value,
+          child: SizedBox(
+            width: 68,
+            height: 68,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const RadialGradient(
+                  colors: [_kButtonRed, _kButtonRedDark],
+                  center: Alignment(-0.2, -0.2),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: _kButtonRed.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, -1),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Center(
-            child: CustomPaint(
-              size: const Size(28, 28),
-              painter: _PokeballIconPainter(color: Colors.white),
+              child: Center(
+                child: CustomPaint(
+                  size: const Size(30, 30),
+                  painter: _PokeballIconPainter(color: Colors.white),
+                ),
+              ),
             ),
           ),
         ),
@@ -133,46 +208,93 @@ class _PokeballIconPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 1;
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
+
+    // Shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+    canvas.drawCircle(Offset(center.dx + 1, center.dy + 1), radius, shadowPaint);
 
     // Top half
+    final topPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi,
       math.pi,
       true,
-      paint,
+      topPaint,
     );
 
     // Bottom half (slightly transparent)
-    paint.color = color.withValues(alpha: 0.7);
+    final bottomPaint = Paint()
+      ..color = color.withValues(alpha: 0.7)
+      ..style = PaintingStyle.fill;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       0,
       math.pi,
       true,
-      paint,
+      bottomPaint,
     );
 
     // Center line
     final linePaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.9)
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 2;
     canvas.drawLine(
       Offset(center.dx - radius, center.dy),
       Offset(center.dx + radius, center.dy),
       linePaint,
     );
 
-    // Center button
-    canvas.drawCircle(center, radius * 0.25, paint);
+    // Center button (white ring)
+    final buttonBorderPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, radius * 0.28, buttonBorderPaint);
+
+    // Center button fill
+    final buttonPaint = Paint()
+      ..color = color.withValues(alpha: 0.7)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius * 0.24, buttonPaint);
+
+    // Button highlight
+    final buttonHighlight = Paint()
+      ..color = Colors.white.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(center.dx - 2, center.dy - 2), radius * 0.12, buttonHighlight);
   }
 
   @override
   bool shouldRepaint(covariant _PokeballIconPainter oldDelegate) =>
       oldDelegate.color != color;
+}
+
+// ─── Decorative accent painter for control panel ──────────────────────────
+class _ControlPanelAccentPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Subtle diagonal accent
+    final accentPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.04)
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..moveTo(size.width * 0.45, 0)
+      ..lineTo(size.width * 0.55, 0)
+      ..lineTo(size.width * 0.4, size.height)
+      ..lineTo(size.width * 0.3, size.height)
+      ..close();
+
+    canvas.drawPath(path, accentPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ─── D-Pad (Left/Right active, Up/Down visual) ────────────────────────────────

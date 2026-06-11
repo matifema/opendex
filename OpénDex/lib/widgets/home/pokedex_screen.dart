@@ -38,6 +38,8 @@ class PokedexScreen extends StatefulWidget {
   final int creatureIndex;
   final int creatureCount;
   final VoidCallback? onReleasePressed;
+  final VoidCallback? onSwipeLeft;
+  final VoidCallback? onSwipeRight;
 
   const PokedexScreen({
     super.key,
@@ -46,6 +48,8 @@ class PokedexScreen extends StatefulWidget {
     required this.creatureIndex,
     this.creatureCount = 0,
     this.onReleasePressed,
+    this.onSwipeLeft,
+    this.onSwipeRight,
   });
 
   @override
@@ -171,46 +175,219 @@ class PokedexScreenState extends State<PokedexScreen> {
   // ─── Main Build ──────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // ── Species counter bar (integrated above the LCD) ──
+        _buildSpeciesBar(),
+        const SizedBox(height: 6),
+        // ── Main LCD Panel ──
+        Expanded(
+          child: GestureDetector(
+            onHorizontalDragEnd: (details) {
+              if (widget.isGenerating) return;
+              final velocity = details.primaryVelocity ?? 0;
+              if (velocity < -200) {
+                widget.onSwipeRight?.call();
+              } else if (velocity > 200) {
+                widget.onSwipeLeft?.call();
+              }
+            },
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              decoration: BoxDecoration(
+                color: _kLcdGreen,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(width: 6, color: _kPokedexBrown),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                  // Inner highlight
+                  BoxShadow(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    blurRadius: 2,
+                    offset: const Offset(0, -1),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: Stack(
+                  children: [
+                    // Scanline overlay
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _ScanlinePainter(),
+                      ),
+                    ),
+                    // Subtle vignette
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _VignettePainter(),
+                      ),
+                    ),
+                    if (widget.creature != null)
+                      _buildCreatureDisplay(context, widget.creature!)
+                    else
+                      _buildEmptyState(context),
+                    if (widget.isGenerating)
+                      Container(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        child: const Center(child: CaptureAnimation(playing: true)),
+                      ),
+                    // Navigation dots overlay
+                    if (widget.creatureCount > 1 && !widget.isGenerating)
+                      Positioned(
+                        bottom: 8,
+                        left: 0,
+                        right: 0,
+                        child: _buildNavDots(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Species Counter Bar (above LCD) ─────────────────────────────────────
+  Widget _buildSpeciesBar() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      margin: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: _kLcdGreen,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(width: 6, color: _kPokedexBrown),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFB80828), Color(0xFF9E0620)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF8B001A), width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-          // Inner highlight
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.1),
-            blurRadius: 2,
-            offset: const Offset(0, -1),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(3),
-        child: Stack(
-          children: [
-            // Scanline overlay
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _ScanlinePainter(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Pokéball icon
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFF5A6E5A), width: 1.5),
+            ),
+            child: ClipOval(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(color: const Color(0xFFDC0A2D)),
+                  ),
+                  Container(height: 2, color: const Color(0xFF5A6E5A)),
+                  Expanded(
+                    child: Container(color: Colors.white),
+                  ),
+                ],
               ),
             ),
-            if (widget.creature != null)
-              _buildCreatureDisplay(context, widget.creature!)
-            else
-              _buildEmptyState(context),
-            if (widget.isGenerating)
-              Container(
-                color: Colors.black.withValues(alpha: 0.4),
-                child: const Center(child: CaptureAnimation(playing: true)),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'SPECIES REGISTERED',
+            style: _pixelText(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.9),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const Spacer(),
+          // Counter with metallic hardware styling
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1A1A1A), Color(0xFF2A2A2A)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF444444), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                _buildDigit(widget.creatureCount.toString().padLeft(3, '0')[0]),
+                const SizedBox(width: 4),
+                _buildDigit(widget.creatureCount.toString().padLeft(3, '0')[1]),
+                const SizedBox(width: 4),
+                _buildDigit(widget.creatureCount.toString().padLeft(3, '0')[2]),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDigit(String digit) {
+    return Container(
+      width: 18,
+      alignment: Alignment.center,
+      child: Text(
+        digit,
+        style: const TextStyle(
+          fontFamily: 'VT323',
+          fontSize: 20,
+          color: Color(0xFFFFD700),
+          letterSpacing: 0,
+          height: 1.0,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Color(0x66FFD700),
+              blurRadius: 4,
+              offset: Offset(0, 0),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavDots() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        widget.creatureCount,
+        (index) => AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: index == widget.creatureIndex ? 14 : 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: index == widget.creatureIndex
+                ? _kPokedexRed
+                : _kLcdTextLight.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(3),
+            boxShadow: index == widget.creatureIndex
+                ? [
+                    BoxShadow(
+                      color: _kPokedexRed.withValues(alpha: 0.4),
+                      blurRadius: 4,
+                    ),
+                  ]
+                : null,
+          ),
         ),
       ),
     );
@@ -310,36 +487,29 @@ class PokedexScreenState extends State<PokedexScreen> {
   // ─── Top Bar ─────────────────────────────────────────────────────────────
   Widget _buildTopBar(Creature creature) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: _kLcdDarkGreen,
+        gradient: LinearGradient(
+          colors: [_kLcdDarkGreen, _kLcdInnerBg],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: _kPanelBorder, width: 2),
         borderRadius: BorderRadius.circular(3),
-      ),
-      child: Row(
-        children: [
-          // Creature number
-          Text(
-            'No.${_formatNumber(widget.creatureIndex + 1)}',
-            style: _pixelText(fontSize: 22, color: _kPokedexRed, fontWeight: FontWeight.bold),
-          ),
-          const Spacer(),
-          // Separator dot
-          Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              color: _kPokedexRed,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const Spacer(),
-          // Creature name
-          Text(
-            creature.name.toUpperCase(),
-            style: _pixelText(fontSize: 22, color: _kLcdTextDark, fontWeight: FontWeight.bold),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 3,
+            offset: Offset(0, 2),
           ),
         ],
+      ),
+      child: Center(
+        child: Text(
+          creature.name.toUpperCase(),
+          style: _pixelText(fontSize: 24, color: _kLcdTextDark, fontWeight: FontWeight.bold),
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
@@ -387,7 +557,7 @@ class PokedexScreenState extends State<PokedexScreen> {
       children: [
         _buildPixelTypeChip(creature.primaryType.name),
         if (creature.secondaryType != null) ...[
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           _buildPixelTypeChip(creature.secondaryType!.name),
         ],
       ],
@@ -398,53 +568,138 @@ class PokedexScreenState extends State<PokedexScreen> {
     final color = _getTypeColor(type);
     final textColor = _isLightColor(color) ? _kLcdTextDark : Colors.white;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: color,
+        gradient: LinearGradient(
+          colors: [color, color.withValues(alpha: 0.85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         border: Border.all(color: _kPanelBorder, width: 2),
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(3),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+          BoxShadow(
+            color: color.withValues(alpha: 0.2),
+            blurRadius: 4,
+            offset: const Offset(0, -1),
           ),
         ],
       ),
-      child: Text(
-        type[0].toUpperCase() + type.substring(1),
-        style: _pixelText(fontSize: 16, color: textColor, fontWeight: FontWeight.bold),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Small type icon dot
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: textColor.withValues(alpha: 0.6),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            type[0].toUpperCase() + type.substring(1),
+            style: _pixelText(fontSize: 17, color: textColor, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
 
   // ─── Stats Panel ─────────────────────────────────────────────────────────
   Widget _buildStatsPanel(CreatureStats stats) {
+    // Calculate total stats
+    final totalStats = stats.hp + stats.attack + stats.defense + stats.speed;
+    final avgStat = totalStats / 4;
+    final rating = _getStatRating(avgStat);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: _kLcdDarkGreen,
+        gradient: LinearGradient(
+          colors: [_kLcdDarkGreen, _kLcdInnerBg],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         border: Border.all(color: _kPanelBorder, width: 2),
         borderRadius: BorderRadius.circular(3),
+        boxShadow: [
+          const BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 3,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'STATUS',
-            style: _pixelText(fontSize: 16, color: _kLcdTextLight, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Text(
+                'STATUS',
+                style: _pixelText(fontSize: 18, color: _kLcdTextLight, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              // Total rating badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _getRatingColor(rating).withValues(alpha: 0.2),
+                  border: Border.all(color: _getRatingColor(rating), width: 1.5),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: Text(
+                  'TOTAL: $totalStats - $rating',
+                  style: _pixelText(
+                    fontSize: 14,
+                    color: _getRatingColor(rating),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          _buildStatRow('HP', stats.hp, 255),
-          const SizedBox(height: 4),
-          _buildStatRow('ATK', stats.attack, 255),
-          const SizedBox(height: 4),
-          _buildStatRow('DEF', stats.defense, 255),
-          const SizedBox(height: 4),
-          _buildStatRow('SPD', stats.speed, 255),
+          const SizedBox(height: 8),
+          _buildStatRow('HP', stats.hp, 100),
+          const SizedBox(height: 5),
+          _buildStatRow('ATK', stats.attack, 80),
+          const SizedBox(height: 5),
+          _buildStatRow('DEF', stats.defense, 80),
+          const SizedBox(height: 5),
+          _buildStatRow('SPD', stats.speed, 80),
         ],
       ),
     );
+  }
+
+  String _getStatRating(double avgStat) {
+    if (avgStat >= 75) return 'LEGENDARY';
+    if (avgStat >= 60) return 'EPIC';
+    if (avgStat >= 48) return 'STRONG';
+    if (avgStat >= 38) return 'AVERAGE';
+    return 'WEAK';
+  }
+
+  Color _getRatingColor(String rating) {
+    switch (rating) {
+      case 'LEGENDARY':
+        return const Color(0xFF8B6914);
+      case 'EPIC':
+        return const Color(0xFF6A1B7A);
+      case 'STRONG':
+        return const Color(0xFF2E6B2E);
+      case 'AVERAGE':
+        return const Color(0xFF1A3A6B);
+      default:
+        return const Color(0xFF5A5A5A);
+    }
   }
 
   Widget _buildStatRow(String label, int value, int maxValue) {
@@ -453,39 +708,62 @@ class PokedexScreenState extends State<PokedexScreen> {
       children: [
         SizedBox(
           width: 32,
-          child: Text(label, style: _pixelText(fontSize: 15, color: _kLcdTextDark)),
+          child: Text(label, style: _pixelText(fontSize: 17, color: _kLcdTextDark)),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         // Stat bar background
         Expanded(
           child: Container(
-            height: 10,
+            height: 12,
             decoration: BoxDecoration(
               color: _kLcdInnerBg,
-              border: Border.all(color: _kPanelBorder, width: 1),
-              borderRadius: BorderRadius.circular(1),
+              border: Border.all(color: _kPanelBorder, width: 1.5),
+              borderRadius: BorderRadius.circular(2),
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FractionallySizedBox(
-                widthFactor: ratio,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: _getStatBarColor(ratio),
-                    borderRadius: BorderRadius.circular(1),
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FractionallySizedBox(
+                    widthFactor: ratio,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _getStatBarColor(ratio),
+                            _getStatBarColor(ratio).withValues(alpha: 0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                // Subtle shine
+                if (ratio > 0.2)
+                  Positioned(
+                    top: 1,
+                    left: 2,
+                    right: 2,
+                    child: Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
         const SizedBox(width: 8),
         SizedBox(
-          width: 30,
+          width: 34,
           child: Text(
-            '$value',
+            value.toString().padLeft(3, '0'),
             textAlign: TextAlign.right,
-            style: _pixelText(fontSize: 15, color: _kLcdTextDark),
+            style: _pixelText(fontSize: 17, color: _kLcdTextDark, fontWeight: FontWeight.bold),
           ),
         ),
       ],
@@ -493,9 +771,9 @@ class PokedexScreenState extends State<PokedexScreen> {
   }
 
   Color _getStatBarColor(double ratio) {
-    if (ratio > 0.6) return const Color(0xFF4CAF50); // green
-    if (ratio > 0.3) return const Color(0xFFFFC107); // yellow
-    return const Color(0xFFF44336); // red
+    if (ratio > 0.6) return const Color(0xFF4CAF50);
+    if (ratio > 0.35) return const Color(0xFFFFB300);
+    return const Color(0xFFE53935);
   }
 
   // ─── Flavor Text Panel ───────────────────────────────────────────────────
@@ -532,7 +810,7 @@ class PokedexScreenState extends State<PokedexScreen> {
               const SizedBox(width: 6),
               Text(
                 'DESCRIPTION',
-                style: _pixelText(fontSize: 16, color: _kLcdTextLight, fontWeight: FontWeight.bold),
+                style: _pixelText(fontSize: 18, color: _kLcdTextLight, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -545,7 +823,7 @@ class PokedexScreenState extends State<PokedexScreen> {
           const SizedBox(height: 6),
           Text(
             flavorText,
-            style: _pixelText(fontSize: 16, color: _kLcdTextDark),
+            style: _pixelText(fontSize: 18, color: _kLcdTextDark),
           ),
         ],
       ),
@@ -566,7 +844,7 @@ class PokedexScreenState extends State<PokedexScreen> {
         children: [
           Text(
             'MOVES',
-            style: _pixelText(fontSize: 16, color: _kLcdTextLight, fontWeight: FontWeight.bold),
+            style: _pixelText(fontSize: 18, color: _kLcdTextLight, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           // Column headers
@@ -583,22 +861,22 @@ class PokedexScreenState extends State<PokedexScreen> {
                   flex: 3,
                   child: Padding(
                     padding: const EdgeInsets.only(left: 6),
-                    child: Text('MOVE', style: _pixelText(fontSize: 13, color: _kLcdTextLight)),
+                    child: Text('MOVE', style: _pixelText(fontSize: 15, color: _kLcdTextLight)),
                   ),
                 ),
                 Expanded(
                   flex: 2,
                   child: Center(
-                    child: Text('TYPE', style: _pixelText(fontSize: 13, color: _kLcdTextLight)),
+                    child: Text('TYPE', style: _pixelText(fontSize: 15, color: _kLcdTextLight)),
                   ),
                 ),
                 SizedBox(
                   width: 40,
-                  child: Text('PWR', textAlign: TextAlign.center, style: _pixelText(fontSize: 13, color: _kLcdTextLight)),
+                  child: Text('PWR', textAlign: TextAlign.center, style: _pixelText(fontSize: 15, color: _kLcdTextLight)),
                 ),
                 SizedBox(
                   width: 40,
-                  child: Text('ACC', textAlign: TextAlign.center, style: _pixelText(fontSize: 13, color: _kLcdTextLight)),
+                  child: Text('ACC', textAlign: TextAlign.center, style: _pixelText(fontSize: 15, color: _kLcdTextLight)),
                 ),
               ],
             ),
@@ -622,7 +900,7 @@ class PokedexScreenState extends State<PokedexScreen> {
               padding: const EdgeInsets.only(left: 6),
               child: Text(
                 move.name,
-                style: _pixelText(fontSize: 14, color: _kLcdTextDark),
+                style: _pixelText(fontSize: 16, color: _kLcdTextDark),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -640,7 +918,7 @@ class PokedexScreenState extends State<PokedexScreen> {
                 ),
                 child: Text(
                   move.type.substring(0, math.min(3, move.type.length)).toUpperCase(),
-                  style: _pixelText(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: _pixelText(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -651,7 +929,7 @@ class PokedexScreenState extends State<PokedexScreen> {
             child: Text(
               move.power != null ? '${move.power}' : '---',
               textAlign: TextAlign.center,
-              style: _pixelText(fontSize: 14, color: _kLcdTextDark),
+              style: _pixelText(fontSize: 15, color: _kLcdTextDark),
             ),
           ),
           SizedBox(
@@ -659,7 +937,7 @@ class PokedexScreenState extends State<PokedexScreen> {
             child: Text(
               move.accuracy != null ? '${move.accuracy}' : '---',
               textAlign: TextAlign.center,
-              style: _pixelText(fontSize: 14, color: _kLcdTextDark),
+              style: _pixelText(fontSize: 15, color: _kLcdTextDark),
             ),
           ),
         ],
@@ -824,21 +1102,46 @@ class PokedexScreenState extends State<PokedexScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Pokéball icon
-            CustomPaint(
-              size: const Size(64, 64),
-              painter: _PokeballPainter(),
-            ),
-            const SizedBox(height: 20),
+            // Animated Pokéball icon
+            _AnimatedPokeball(size: 72),
+            const SizedBox(height: 24),
             Text(
               'NO DATA REGISTERED',
-              style: _pixelText(fontSize: 24, color: _kLcdTextDark, fontWeight: FontWeight.bold),
+              style: _pixelText(fontSize: 26, color: _kLcdTextDark, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            Text(
-              'Press the red button to catch\nyour first creature!',
-              textAlign: TextAlign.center,
-              style: _pixelText(fontSize: 18, color: _kLcdTextLight),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _kLcdInnerBg,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: _kPanelBorder, width: 1),
+              ),
+              child: Text(
+                'Press the red button\nto catch your first creature!',
+                textAlign: TextAlign.center,
+                style: _pixelText(fontSize: 18, color: _kLcdTextLight),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Subtle arrow hint
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.arrow_downward,
+                  size: 16,
+                  color: _kLcdTextLight.withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'TAP BELOW',
+                  style: _pixelText(
+                    fontSize: 12,
+                    color: _kLcdTextLight.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -847,8 +1150,6 @@ class PokedexScreenState extends State<PokedexScreen> {
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
-  String _formatNumber(int n) => n.toString().padLeft(3, '0');
-
   bool _isLightColor(Color color) {
     return color.computeLuminance() > 0.5;
   }
@@ -968,12 +1269,105 @@ class _LcdGridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+// ─── Animated Pokéball Widget (empty state) ────────────────────────────────
+class _AnimatedPokeball extends StatefulWidget {
+  final double size;
+
+  const _AnimatedPokeball({required this.size});
+
+  @override
+  State<_AnimatedPokeball> createState() => _AnimatedPokeballState();
+}
+
+class _AnimatedPokeballState extends State<_AnimatedPokeball>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _bounce;
+  late final Animation<double> _glow;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+    _bounce = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0, end: -8)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -8, end: 0)
+            .chain(CurveTween(curve: Curves.bounceOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0, end: 0)
+            .chain(CurveTween(curve: Curves.linear)),
+        weight: 50,
+      ),
+    ]).animate(_controller);
+
+    _glow = Tween<double>(begin: 0.2, end: 0.6).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Transform.translate(
+        offset: Offset(0, _bounce.value),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Glow effect
+            AnimatedBuilder(
+              animation: _glow,
+              builder: (context, child) => Container(
+                width: widget.size + 16,
+                height: widget.size + 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _kPokedexRed.withValues(alpha: _glow.value),
+                ),
+              ),
+            ),
+            // Pokeball
+            CustomPaint(
+              size: Size(widget.size, widget.size),
+              painter: _PokeballPainter(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Pokéball Painter (empty state icon) ─────────────────────────────────────
 class _PokeballPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 2;
+
+    // Shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(Offset(center.dx + 2, center.dy + 2), radius, shadowPaint);
 
     // Outer border
     final borderPaint = Paint()
@@ -1014,14 +1408,86 @@ class _PokeballPainter extends CustomPainter {
 
     // Center button
     final buttonPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, 8, buttonPaint);
+    canvas.drawCircle(center, 10, buttonPaint);
     final buttonBorder = Paint()
       ..color = _kPanelBorder
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    canvas.drawCircle(center, 8, buttonBorder);
+      ..strokeWidth = 2.5;
+    canvas.drawCircle(center, 10, buttonBorder);
     final buttonInner = Paint()..color = _kPokedexRed;
-    canvas.drawCircle(center, 4, buttonInner);
+    canvas.drawCircle(center, 5, buttonInner);
+
+    // Button highlight
+    final buttonHighlight = Paint()
+      ..color = Colors.white.withValues(alpha: 0.4)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(center.dx - 2, center.dy - 2), 3, buttonHighlight);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─── Blinking Dot Widget ──────────────────────────────────────────────────
+class _BlinkingDot extends StatefulWidget {
+  @override
+  State<_BlinkingDot> createState() => _BlinkingDotState();
+}
+
+class _BlinkingDotState extends State<_BlinkingDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _opacity;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _opacity = Tween<double>(begin: 1.0, end: 0.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _opacity,
+      builder: (context, child) => Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: const Color(0xFF33FF33).withValues(alpha: _opacity.value),
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Vignette Painter (subtle LCD edge darkening) ─────────────────────────
+class _VignettePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.transparent,
+          Colors.black.withValues(alpha: 0.08),
+        ],
+        radius: 0.75,
+      ).createShader(rect);
+    canvas.drawRect(rect, paint);
   }
 
   @override

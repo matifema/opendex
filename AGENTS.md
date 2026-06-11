@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **pokedex** (361 symbols, 847 relationships, 30 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **opendex** (375 symbols, 872 relationships, 31 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -24,10 +24,10 @@ This project is indexed by GitNexus as **pokedex** (361 symbols, 847 relationshi
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/pokedex/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/pokedex/clusters` | All functional areas |
-| `gitnexus://repo/pokedex/processes` | All execution flows |
-| `gitnexus://repo/pokedex/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/opendex/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/opendex/clusters` | All functional areas |
+| `gitnexus://repo/opendex/processes` | All execution flows |
+| `gitnexus://repo/opendex/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
