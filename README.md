@@ -47,10 +47,9 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/screen1-pokedex.png" alt="Pokédex screen with creature" width="200">
-  <img src="docs/screenshots/screen3-animation.png" alt="Opening animation" width="200">
-  <img src="docs/screenshots/screen2-settings.png" alt="Settings page" width="200">
-  <img src="docs/screenshots/screen4-creature2.png" alt="Another creature" width="200">
+  <img src="docs/screenshots/screenshot1.png" alt="App screenshot 1" width="200">
+  <img src="docs/screenshots/screenshot2.png" alt="App screenshot 2" width="200">
+  <img src="docs/screenshots/screenshot3.png" alt="App screenshot 3" width="200">
 </p>
 
 ---
@@ -65,6 +64,17 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 - **Persistent library** -- Your creature collection stays on-device between sessions
 - **Creature release** -- Delete creatures you no longer want
 - **Zero backend** -- All generation runs through the Gemini API from your phone
+
+---
+
+## More Creatures
+
+<p align="center">
+  <img src="docs/screenshots/ichthyosavant-animated.gif" alt="Ichthyosavant sprite" width="128">
+  <img src="docs/screenshots/rubytrunk-animated.gif" alt="Rubytrunk sprite" width="128">
+</p>
+
+<p align="center"><em>Ichthyosavant (Nature / Arcane) and Rubytrunk (Earth / Arcane)</em></p>
 
 ---
 
