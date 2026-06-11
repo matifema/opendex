@@ -29,6 +29,21 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 
 ---
 
+## Example
+
+<p align="center">
+  <strong>Original photo</strong> &rarr; <strong>Generated creature</strong>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/octolume-photo.png" alt="Original photo" width="200">
+  <img src="docs/screenshots/octolume-animated.gif" alt="Octolume sprite animation" width="256">
+</p>
+
+<p align="center"><em>Octolume, a Water / Light type, generated from a photo of a toy octopus.</em></p>
+
+---
+
 ## Features
 
 - **Instant creature generation** -- Take a photo, tap capture, and watch the Pokédex-style opening animation
