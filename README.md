@@ -48,7 +48,7 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 
 | Platform | Link |
 |----------|------|
-| Android  | [app-release.apk](https://github.com/matifema/pokedex/releases/latest/download/app-release.apk) |
+| Android  | [app-release.apk](https://github.com/matifema/opendex/releases/latest/download/app-release.apk) |
 
 Scan the QR code or tap the link above to download the latest APK directly to your Android device.
 
