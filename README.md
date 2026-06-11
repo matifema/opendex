@@ -1,3 +1,7 @@
+<h1 align="center">Opéndex</h1>
+
+<p align="center"><strong>Take a photo. Get a creature.</strong></p>
+
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.4%2B-blue?logo=flutter" alt="Flutter">
   <img src="https://img.shields.io/badge/Gemini-AI-purple?logo=googlegemini" alt="Gemini AI">
