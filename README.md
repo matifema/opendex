@@ -21,22 +21,8 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 ## Example
 
 <p align="center">
-  <strong>Original photo</strong>
-</p>
-
-<p align="center">
   <img src="docs/screenshots/octolume-photo.png" alt="Original photo" width="200">
-</p>
-
-<p align="center">
-  <strong style="font-size: 48px; line-height: 1;">&#8595;</strong>
-</p>
-
-<p align="center">
-  <strong>Generated creature</strong>
-</p>
-
-<p align="center">
+  <strong style="font-size: 48px; vertical-align: middle; margin: 0 24px;">&#8594;</strong>
   <img src="docs/screenshots/octolume-animated.gif" alt="Octolume sprite animation" width="256">
 </p>
 
@@ -47,9 +33,9 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/screenshot1.png" alt="App screenshot 1" width="200">
-  <img src="docs/screenshots/screenshot2.png" alt="App screenshot 2" width="200">
   <img src="docs/screenshots/screenshot3.png" alt="App screenshot 3" width="200">
+  <img src="docs/screenshots/screenshot2.png" alt="App screenshot 2" width="200">
+  <img src="docs/screenshots/screenshot1.png" alt="App screenshot 1" width="200">
 </p>
 
 ---
