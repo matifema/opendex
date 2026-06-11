@@ -21,13 +21,11 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/screen1-home.png" alt="Home screen" width="200">
-  <img src="docs/screenshots/screen2-animation.png" alt="Opening animation" width="200">
-  <img src="docs/screenshots/screen3-creature.png" alt="Creature detail" width="200">
-  <img src="docs/screenshots/screen4-library.png" alt="Creature library" width="200">
+  <img src="docs/screenshots/screen1-pokedex.png" alt="Pokédex screen with creature" width="200">
+  <img src="docs/screenshots/screen3-animation.png" alt="Opening animation" width="200">
+  <img src="docs/screenshots/screen2-settings.png" alt="Settings page" width="200">
+  <img src="docs/screenshots/screen4-creature2.png" alt="Another creature" width="200">
 </p>
-
-> Screenshots coming soon. In the meantime, [download the APK](#download) and try it yourself.
 
 ---
 
