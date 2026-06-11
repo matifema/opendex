@@ -1,4 +1,4 @@
-<h1 align="center">Opéndex</h1>
+<h1 align="center">OpénDex</h1>
 
 <p align="center"><strong>Take a photo. Get a creature.</strong></p>
 
