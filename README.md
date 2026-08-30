@@ -1,6 +1,6 @@
 <h1 align="center">OpénDex</h1>
 
-<p align="center"><strong>Take a photo. Get a creature.</strong></p>
+<p align="center"><strong>A Gen 1 Pokédex for whatever is in front of the camera.</strong></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.4%2B-blue?logo=flutter" alt="Flutter">
@@ -10,7 +10,11 @@
 
 ---
 
-Opéndex turns your phone camera into a creature generator. Snap a photo of anything: your cat, a houseplant, the sandwich on your desk, and Gemini AI creates a unique pixel-art creature with stats, types, moves, and a walking sprite sheet. Everything runs on-device through the Gemini API. No backend, no account, just your camera and your imagination.
+Point the camera at a person, a pet, a coffee mug, or anything else and Opéndex turns it into a Gen 1-style Pokémon: name, types, stats, moves, and a walking sprite.
+
+The chunky pixels are the point. Sprites are generated small, then scaled with nearest-neighbor so they stay blocky instead of getting smoothed into mush. It is meant to look like a Game Boy Pokédex entry, not a high-res illustration.
+
+There is no account and no backend. The phone talks to the Gemini API and stores the collection locally.
 
 ---
 
@@ -48,14 +52,12 @@ Opéndex turns your phone camera into a creature generator. Snap a photo of anyt
 
 ## Features
 
-- **Instant creature generation** -- Take a photo, tap capture, and watch the Pokédex-style opening animation
-- **AI-powered stats** -- Each creature gets a name, dual types, HP/Attack/Defense/Speed, and flavor text
-- **4-frame sprite sheet** -- Walking animation in crisp pixel art via Gemini image generation
-- **Gen 1 style moves** -- 4 moves auto-assigned based on creature types (STAB, coverage, and status)
-- **Retro Pokédex UI** -- D-pad navigation, LCD screen styling, and pixel-perfect VT323 typography
-- **Persistent library** -- Your creature collection stays on-device between sessions
-- **Creature release** -- Delete creatures you no longer want
-- **Zero backend** -- All generation runs through the Gemini API from your phone
+- **Photo in, Pokémon out** — people, objects, pets, whatever is in the frame
+- **Gen 1 presentation** — dual types, HP/Attack/Defense/Speed, flavor text, and four moves
+- **Intentional pixelation** — 4-frame walk cycle generated small and nearest-neighbor scaled; blur is a bug, chunks are the look
+- **Pokédex shell** — D-pad, LCD-style screen, VT323
+- **On-device library** — collection persists locally; release anything you do not want to keep
+- **No backend** — Gemini API from the phone only
 
 ---
 
@@ -134,8 +136,8 @@ The analysis model is free on the free tier, making image output tokens ($60/1M)
 ### Setup
 
 ```bash
-git clone https://github.com/matifema/pokedex.git
-cd pokedex/OpénDex
+git clone https://github.com/matifema/opendex.git
+cd opendex/OpénDex
 flutter pub get
 ```
 
