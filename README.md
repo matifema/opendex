@@ -12,7 +12,7 @@
 
 Point the camera at a person, a pet, a coffee mug, or anything else and Opéndex turns it into a Gen 1-style Pokémon: name, types, stats, moves, and a walking sprite.
 
-The chunky pixels are the point. Sprites are generated small, then scaled with nearest-neighbor so they stay blocky instead of getting smoothed into mush. It is meant to look like a Game Boy Pokédex entry, not a high-res illustration.
+The animation sprites cut from a single generated image, then scaled with nearest-neighbor so they stay nice and pixelated instead of getting smoothed into mush.
 
 There is no account and no backend. The phone talks to the Gemini API and stores the collection locally.
 
