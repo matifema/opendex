@@ -1,6 +1,6 @@
 <h1 align="center">OpénDex</h1>
 
-<p align="center"><strong>A Gen 1 Pokédex for whatever is in front of the camera.</strong></p>
+<p align="center">please Nintendo don't sue me.</</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.4%2B-blue?logo=flutter" alt="Flutter">
