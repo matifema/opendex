@@ -15,8 +15,8 @@ Point the camera at a person, a pet, a coffee mug, or anything else and Opéndex
 The animation sprites cut from a single generated image, then scaled with nearest-neighbor so they stay nice and pixelated instead of getting smoothed into mush.
 
 There is no account and no backend. The phone talks to the Gemini API and stores the collection locally.
-
 Get a Gemini api key [here](https://aistudio.google.com/api-keys).
+
 ---
 
 ## Example
