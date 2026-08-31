@@ -16,6 +16,7 @@ The animation sprites cut from a single generated image, then scaled with neares
 
 There is no account and no backend. The phone talks to the Gemini API and stores the collection locally.
 
+Get a Gemini api key [here](https://aistudio.google.com/api-keys).
 ---
 
 ## Example
@@ -50,28 +51,6 @@ There is no account and no backend. The phone talks to the Gemini API and stores
 
 ---
 
-## Features
-
-- **Photo in, Pokémon out** — people, objects, pets, whatever is in the frame
-- **Gen 1 presentation** — dual types, HP/Attack/Defense/Speed, flavor text, and four moves
-- **Intentional pixelation** — 4-frame walk cycle generated small and nearest-neighbor scaled; blur is a bug, chunks are the look
-- **Pokédex shell** — D-pad, LCD-style screen, VT323
-- **On-device library** — collection persists locally; release anything you do not want to keep
-- **No backend** — Gemini API from the phone only
-
----
-
-## More Creatures
-
-<p align="center">
-  <img src="docs/screenshots/ichthyosavant-animated.gif" alt="Ichthyosavant sprite" width="128">
-  <img src="docs/screenshots/rubytrunk-animated.gif" alt="Rubytrunk sprite" width="128">
-</p>
-
-<p align="center"><em>Ichthyosavant (Nature / Arcane) and Rubytrunk (Earth / Arcane)</em></p>
-
----
-
 ## Download
 
 | Platform | Link |
@@ -80,34 +59,8 @@ There is no account and no backend. The phone talks to the Gemini API and stores
 
 Scan the QR code or tap the link above to download the latest APK directly to your Android device.
 
-> iOS is not yet supported due to Gemini image generation limitations on the SDK version used.
-
+> iOS is not yet supported due to the fact that i dont have an iphone.
 ---
-
-## How It Works
-
-```
-[Camera] --> [Gemini Text] --> [Creature Spec]
-                 |
-                 +-> Name, Types, Stats, Flavor Text
-                 +-> Visual description + palette
-                              |
-                              v
-                       [Gemini Image]
-                              |
-                              +-> 256x64 sprite sheet (4 frames)
-                              |
-                              v
-                       [Post-Processing]
-                              |
-                              +-> White-to-transparent conversion
-                              +-> Nearest-neighbor resize
-                              |
-                              v
-                       [Move Database]
-                              |
-                              +-> 4 moves based on types
-```
 
 The app sends your photo to `gemini-3.1-flash-lite-preview` which returns a JSON creature spec. That spec is then sent to `gemini-3.1-flash-image-preview` to generate the pixel art. The raw sprite goes through chrominance-aware alpha masking and nearest-neighbor resize to produce crisp transparent PNGs.
 
@@ -122,85 +75,6 @@ Pricing based on [Google Gemini API](https://ai.google.dev/gemini-api/docs/prici
 | **Total** | | | | **~$0.012** | **~$0.015** |
 
 The analysis model is free on the free tier, making image output tokens ($60/1M) the dominant cost. On the paid tier both steps together still come out to roughly 1.5 cents per creature. The sprite sheet is only 256 x 64 pixels so it stays well under the 512 px pricing tier.
-
----
-
-## Contributing
-
-### Prerequisites
-
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) 3.4 or later
-- Android SDK (for Android builds) or Xcode (iOS, currently limited support)
-- A [Gemini API key](https://aistudio.google.com/apikey)
-
-### Setup
-
-```bash
-git clone https://github.com/matifema/opendex.git
-cd opendex/OpénDex
-flutter pub get
-```
-
-### Run (debug)
-
-```bash
-flutter run --dart-define=GEMINI_API_KEY=your_key_here
-```
-
-You can also enter the API key inside the app's Settings screen.
-
-### Build (release APK)
-
-```bash
-flutter build apk --release --dart-define=GEMINI_API_KEY=your_key_here
-```
-
-The APK is output to `build/app/outputs/flutter-apk/app-release.apk`.
-
-### Project structure
-
-```
-OpénDex/lib/
-  config.dart                  -- API key from dart-define
-  main.dart                    -- App entry point, theming
-  models/                      -- Creature, Stats, Move data classes
-  pages/
-    home_page.dart             -- Camera, generation flow, navigation
-    settings_page.dart         -- API key input and preferences
-  services/
-    ai/
-      gemini_service.dart      -- Gemini API client (analysis + image gen)
-      image_processor.dart     -- White-to-transparent + resize pipeline
-      move_database.dart       -- Gen 1 move pool with type-based selection
-    storage/                   -- SharedPreferences, file-based persistence
-  widgets/
-    home/
-      pokedex_screen.dart      -- LCD display with creature stats and sprite
-      pokedex_header.dart      -- Title bar and species counter
-      control_panel.dart       -- Capture button and D-pad
-    capture_animation.dart     -- Pokeball spinner during generation
-    dex_open_animation.dart    -- Mechanical opening animation
-```
-
-### Architecture notes
-
-The generation pipeline is stateless: each photo triggers a fresh Gemini call. The only state stored locally is the creature library (serialized as JSON via `shared_preferences` and sprite sheets saved as PNG files). The API key is also stored in `shared_preferences` if entered through Settings.
-
-The image generation uses raw HTTP (not the SDK) because the `google_generative_ai` 0.4.7 SDK cannot parse `inlineData` parts in model responses. The HTTP client handles both the analysis and image endpoints, with one automatic retry on transient failures.
-
-### Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `google_generative_ai` ^0.4.7 | Gemini text generation SDK |
-| `http` ^1.5.0 | Raw HTTP for Gemini image generation |
-| `image` ^4.5.4 | Pixel-level image processing |
-| `image_picker` ^1.1.2 | Camera and gallery access |
-| `shared_preferences` ^2.2.2 | Local persistence |
-| `path_provider` ^2.1.3 | File system paths |
-| `google_fonts` ^6.2.1 | VT323 pixel font |
-
----
 
 ## Disclaimer
 
