@@ -62,8 +62,6 @@ Scan the QR code or tap the link above to download the latest APK directly to yo
 > iOS is not yet supported due to the fact that i dont have an iphone.
 ---
 
-The app sends your photo to `gemini-3.1-flash-lite-preview` which returns a JSON creature spec. That spec is then sent to `gemini-3.1-flash-image-preview` to generate the pixel art. The raw sprite goes through chrominance-aware alpha masking and nearest-neighbor resize to produce crisp transparent PNGs.
-
 ### Cost per creature
 
 Pricing based on [Google Gemini API](https://ai.google.dev/gemini-api/docs/pricing) (June 2026).
@@ -73,8 +71,6 @@ Pricing based on [Google Gemini API](https://ai.google.dev/gemini-api/docs/prici
 | Analysis | `gemini-3.1-flash-lite` | ~2,200 text + ~260 image | ~600 JSON | $0 | ~$0.0015 |
 | Sprite sheet | `gemini-3.1-flash-image` | ~3,000 text | ~200 image | -- | ~$0.0135 |
 | **Total** | | | | **~$0.012** | **~$0.015** |
-
-The analysis model is free on the free tier, making image output tokens ($60/1M) the dominant cost. On the paid tier both steps together still come out to roughly 1.5 cents per creature. The sprite sheet is only 256 x 64 pixels so it stays well under the 512 px pricing tier.
 
 ## Disclaimer
 
