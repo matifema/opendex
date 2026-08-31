@@ -41,16 +41,6 @@ Get a Gemini api key [here](https://aistudio.google.com/api-keys).
 
 ---
 
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/screenshot3.png" alt="App screenshot 3" width="200">
-  <img src="docs/screenshots/screenshot2.png" alt="App screenshot 2" width="200">
-  <img src="docs/screenshots/screenshot1.png" alt="App screenshot 1" width="200">
-</p>
-
----
-
 ## Download
 
 | Platform | Link |
@@ -60,6 +50,7 @@ Get a Gemini api key [here](https://aistudio.google.com/api-keys).
 Scan the QR code or tap the link above to download the latest APK directly to your Android device.
 
 > iOS is not yet supported due to the fact that i dont have an iphone.
+
 ---
 
 ### Cost per creature
